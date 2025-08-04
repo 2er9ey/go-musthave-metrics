@@ -94,7 +94,7 @@ func getMetrics() {
 		metricsValues.PollCount += 1
 		metricsValues.RandomValue = rand.Float64()
 		mutex.Unlock()
-		fmt.Println(metricsValues)
+		//		fmt.Println(metricsValues)
 		time.Sleep(time.Duration(pollInterval) * time.Second)
 	}
 }
@@ -132,14 +132,16 @@ func sendMetrics() {
 		sendGaugeMetric("RandomValue", float64(metricsValues.RandomValue))
 		sendCounterMetric("PollCount", int64(metricsValues.PollCount))
 		mutex.Unlock()
-		fmt.Println("Sending metrics")
+		//		fmt.Println("Sending metrics")
 		time.Sleep(time.Duration(reportInterval) * time.Second)
 	}
 
 }
 
 func sendGaugeMetric(name string, value float64) {
-	http.Post("http://127.0.0.1:8080/update/gauge/"+name+"/"+strconv.FormatFloat(value, 'E', 5, 64), "text/plain", nil)
+	response, _ := http.Post("http://127.0.0.1:8080/update/gauge/"+name+"/"+strconv.FormatFloat(value, 'E', 5, 64), "text/plain", nil)
+
+	defer response.Body.Close()
 
 	// fmt.Printf("Status Code: %d\r\n", response.StatusCode)
 	// for k, v := range response.Header {
@@ -151,7 +153,9 @@ func sendGaugeMetric(name string, value float64) {
 }
 
 func sendCounterMetric(name string, value int64) {
-	http.Post("http://127.0.0.1:8080/update/gauge/"+name+"/"+strconv.FormatInt(value, 10), "text/plain", nil)
+	response, _ := http.Post("http://127.0.0.1:8080/update/gauge/"+name+"/"+strconv.FormatInt(value, 10), "text/plain", nil)
+
+	defer response.Body.Close()
 
 	// fmt.Printf("Status Code: %d\r\n", response.StatusCode)
 	// for k, v := range response.Header {
