@@ -46,5 +46,6 @@ func (mh *MetricHandler) PostUpdate(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Неверное значение метрики", http.StatusBadRequest)
 		return
 	}
+	w.Header().Set("Content-type", "text/plain")
 	w.WriteHeader(http.StatusOK)
 }

@@ -5,20 +5,14 @@ import (
 	"strconv"
 
 	"github.com/2er9ey/go-musthave-metrics/internal/models"
+	"github.com/2er9ey/go-musthave-metrics/internal/repository"
 )
 
-type MetricsRepositoryInterface interface {
-	Set(m models.Metrics) error
-	GetString(metricKey string) (string, error)
-	GetMetric(metricKey string) (models.Metrics, error)
-	GetAllMetric() map[string]models.Metrics
-}
-
 type MetricService struct {
-	repo MetricsRepositoryInterface
+	repo repository.MetricsRepositoryInterface
 }
 
-func NewMetricService(repo MetricsRepositoryInterface) *MetricService {
+func NewMetricService(repo repository.MetricsRepositoryInterface) *MetricService {
 	return &MetricService{
 		repo: repo,
 	}
