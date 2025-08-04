@@ -139,7 +139,11 @@ func sendMetrics() {
 }
 
 func sendGaugeMetric(name string, value float64) {
-	response, _ := http.Post("http://127.0.0.1:8080/update/gauge/"+name+"/"+strconv.FormatFloat(value, 'E', 5, 64), "text/plain", nil)
+	response, err := http.Post("http://127.0.0.1:8080/update/gauge/"+name+"/"+strconv.FormatFloat(value, 'E', 5, 64), "text/plain", nil)
+
+	if err != nil {
+		return
+	}
 
 	defer response.Body.Close()
 
@@ -153,7 +157,11 @@ func sendGaugeMetric(name string, value float64) {
 }
 
 func sendCounterMetric(name string, value int64) {
-	response, _ := http.Post("http://127.0.0.1:8080/update/gauge/"+name+"/"+strconv.FormatInt(value, 10), "text/plain", nil)
+	response, err := http.Post("http://127.0.0.1:8080/update/gauge/"+name+"/"+strconv.FormatInt(value, 10), "text/plain", nil)
+
+	if err != nil {
+		return
+	}
 
 	defer response.Body.Close()
 
