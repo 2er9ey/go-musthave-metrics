@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"io"
 
 	"github.com/2er9ey/go-musthave-metrics/internal/handler"
@@ -13,6 +14,9 @@ func main() {
 	repo := repository.NewMemoryStorage()
 	service := service.NewMetricService(repo)
 	metricsHadler := handler.NewMetricHandler(service)
+	listenEndpoint := flag.String("a", "localhost:8080", "Адрес и порт для работы севрера")
+
+	flag.Parse()
 
 	gin.SetMode(gin.ReleaseMode)
 	gin.DefaultWriter = io.Discard
@@ -36,5 +40,5 @@ func main() {
 		metricsHadler.PostUpdate(c.Writer, c.Request)
 	})
 
-	router.Run("localhost:8080")
+	router.Run(*listenEndpoint)
 }
