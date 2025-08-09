@@ -45,14 +45,10 @@ func (ms *MetricService) Set(mID string, mType string, mValue string) error {
 	return err
 }
 
-func (ms *MetricService) Get(mID string) (string, error) {
-	return ms.repo.GetString(mID)
+func (ms *MetricService) Get(mID string, mType string) (string, error) {
+	return ms.repo.GetString(mID, mType)
 }
 
-func (ms *MetricService) GetAll() map[string]string {
-	res := map[string]string{}
-	for key, value := range ms.repo.GetAllMetric() {
-		res[key] = value.String()
-	}
-	return res
+func (ms *MetricService) GetAll() []models.Metrics {
+	return ms.repo.GetAllMetric()
 }

@@ -1,11 +1,12 @@
 package main
 
 import (
-	"net/http"
+	"io"
 
 	"github.com/2er9ey/go-musthave-metrics/internal/handler"
 	"github.com/2er9ey/go-musthave-metrics/internal/repository"
 	"github.com/2er9ey/go-musthave-metrics/internal/service"
+	"github.com/gin-gonic/gin"
 )
 
 func main() {
@@ -13,15 +14,27 @@ func main() {
 	service := service.NewMetricService(repo)
 	metricsHadler := handler.NewMetricHandler(service)
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("POST /update/{metricType}/{metricName}/{metricValue}", metricsHadler.PostUpdate)
-	mux.HandleFunc("POST /update/{metricType}/", metricsHadler.StatusNotFound)
-	mux.HandleFunc("POST /update/{metricType}", metricsHadler.StatusNotFound)
-	mux.HandleFunc("POST /update/", metricsHadler.StatusBadRequest)
-	mux.HandleFunc("POST /update", metricsHadler.StatusBadRequest)
+	gin.SetMode(gin.ReleaseMode)
+	gin.DefaultWriter = io.Discard
+	router := gin.New()
+	router.Use(gin.Recovery())
 
-	err := http.ListenAndServe(`localhost:8080`, mux)
-	if err != nil {
-		panic(err)
-	}
+	router.GET("/", func(c *gin.Context) {
+		metricsHadler.GetAll(c.Writer, c.Request)
+	})
+
+	router.GET("/value/:metricType/:metricName", func(c *gin.Context) {
+		c.Request.SetPathValue("metricType", c.Param("metricType"))
+		c.Request.SetPathValue("metricName", c.Param("metricName"))
+		metricsHadler.GetValue(c.Writer, c.Request)
+	})
+
+	router.POST("/update/:metricType/:metricName/:metricValue", func(c *gin.Context) {
+		c.Request.SetPathValue("metricType", c.Param("metricType"))
+		c.Request.SetPathValue("metricName", c.Param("metricName"))
+		c.Request.SetPathValue("metricValue", c.Param("metricValue"))
+		metricsHadler.PostUpdate(c.Writer, c.Request)
+	})
+
+	router.Run("localhost:8080")
 }

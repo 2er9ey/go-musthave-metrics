@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 	"sync"
 	"time"
@@ -20,9 +19,10 @@ func main() {
 
 	var wg sync.WaitGroup
 	go getMetrics(repo, cm)
+	time.Sleep(time.Duration(reportInterval) * time.Second)
 	sendMetrics(repo)
 	wg.Wait()
-	fmt.Println("All workers are done!")
+	// fmt.Println("All workers are done!")
 }
 
 func getMetrics(repo repository.MetricsRepositoryInterface, collectMetrics *[]agent.CollectMetric) {
@@ -30,7 +30,7 @@ func getMetrics(repo repository.MetricsRepositoryInterface, collectMetrics *[]ag
 		mutex.Lock()
 		agent.CollectorMetrics(repo, collectMetrics)
 		mutex.Unlock()
-		fmt.Println("Метрики собраны")
+		//		fmt.Println("Метрики собраны")
 		time.Sleep(time.Duration(pollInterval) * time.Second)
 	}
 }
@@ -40,15 +40,15 @@ func sendMetrics(repo repository.MetricsRepositoryInterface) {
 		mutex.Lock()
 		metrics := repo.GetAllMetric()
 		mutex.Unlock()
-		for key, value := range metrics {
-			response, err := http.Post("http://127.0.0.1:8080/update/"+value.MType+"/"+key+"/"+value.String(), "text/plain", nil)
+		for _, value := range metrics {
+			response, err := http.Post("http://127.0.0.1:8080/update/"+value.MType+"/"+value.ID+"/"+value.String(), "text/plain", nil)
 			if err != nil {
-				fmt.Println("Ошибка отправки метрик")
+				//				fmt.Println("Ошибка отправки метрик")
 				break
 			}
 			response.Body.Close()
 		}
-		fmt.Println("Метрики отправлены")
+		//		fmt.Println("Метрики отправлены")
 		time.Sleep(time.Duration(reportInterval) * time.Second)
 	}
 }
