@@ -33,7 +33,7 @@ func (m Metrics) String() string {
 	switch m.MType {
 	case Gauge:
 		if m.Value != nil {
-			res = fmt.Sprintf("%.3f", *(m.Value))
+			res = fmt.Sprintf("%g", *(m.Value))
 		}
 	case Counter:
 		if m.Delta != nil {
