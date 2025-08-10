@@ -14,7 +14,7 @@ type CollectMetric struct {
 	collectType string
 }
 
-func NewCollectionMectics() *[]CollectMetric {
+func NewCollectionMetrics() *[]CollectMetric {
 	return &([]CollectMetric{
 		{ID: "Alloc", collectType: collectTypeMemStat, MType: models.Gauge},
 		{ID: "BuckHashSys", collectType: collectTypeMemStat, MType: models.Gauge},

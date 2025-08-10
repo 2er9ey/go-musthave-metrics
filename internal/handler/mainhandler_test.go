@@ -8,6 +8,7 @@ import (
 
 	"github.com/2er9ey/go-musthave-metrics/internal/repository"
 	"github.com/2er9ey/go-musthave-metrics/internal/service"
+	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -33,8 +34,8 @@ func TestMainHandler(t *testing.T) {
 		{
 			name: "without metrit name",
 			want: want{
-				contentType: "text/plain; charset=utf-8",
-				statusCode:  400,
+				contentType: "text/plain",
+				statusCode:  404,
 			},
 			request: "/update",
 		},
@@ -42,21 +43,16 @@ func TestMainHandler(t *testing.T) {
 
 	repo := repository.NewMemoryStorage()
 	serv := service.NewMetricService(repo)
-	mh := NewMetricHandler(serv)
-	mux := http.NewServeMux()
-	mux.HandleFunc("POST /update/{metricType}/{metricName}/{metricValue}", mh.PostUpdate)
-	mux.HandleFunc("POST /update/{metricType}/", mh.StatusNotFound)
-	mux.HandleFunc("POST /update/{metricType}", mh.StatusNotFound)
-	mux.HandleFunc("POST /update/", mh.StatusBadRequest)
-	mux.HandleFunc("POST /update", mh.StatusBadRequest)
+	metricsHandler := NewMetricHandler(serv)
+
+	router := setupRouter(*metricsHandler)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			request := httptest.NewRequest(http.MethodPost, tt.request, nil)
 			request.Header.Set("Content-Type", "text/plain")
 			w := httptest.NewRecorder()
-			mux.ServeHTTP(w, request)
-
+			router.ServeHTTP(w, request)
 			result := w.Result()
 
 			assert.Equal(t, tt.want.statusCode, result.StatusCode)
@@ -68,4 +64,24 @@ func TestMainHandler(t *testing.T) {
 			require.NoError(t, err)
 		})
 	}
+}
+
+func setupRouter(metricsHandler MetricHandler) *gin.Engine {
+	gin.SetMode(gin.ReleaseMode)
+	gin.DefaultWriter = io.Discard
+	router := gin.New()
+	router.Use(gin.Recovery())
+
+	router.GET("/", func(c *gin.Context) {
+		metricsHandler.GetAll(c)
+	})
+
+	router.GET("/value/:metricType/:metricName", func(c *gin.Context) {
+		metricsHandler.GetValue(c)
+	})
+
+	router.POST("/update/:metricType/:metricName/:metricValue", func(c *gin.Context) {
+		metricsHandler.PostUpdate(c)
+	})
+	return router
 }

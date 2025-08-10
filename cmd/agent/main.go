@@ -21,7 +21,7 @@ func main() {
 	flag.IntVar(&reportInterval, "r", 10, "Время отправки метрик на сервер")
 	flag.Parse()
 
-	cm := agent.NewCollectionMectics()
+	cm := agent.NewCollectionMetrics()
 	var repo repository.MetricsRepositoryInterface = repository.NewMemoryStorage()
 
 	var wg sync.WaitGroup

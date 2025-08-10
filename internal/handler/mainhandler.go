@@ -5,6 +5,7 @@ import (
 	"sort"
 
 	"github.com/2er9ey/go-musthave-metrics/internal/service"
+	"github.com/gin-gonic/gin"
 )
 
 type MetricHandler struct {
@@ -15,66 +16,56 @@ func NewMetricHandler(service service.MetricServiceInterface) *MetricHandler {
 	return &MetricHandler{service: service}
 }
 
-func (mh *MetricHandler) StatusBadRequest(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, "", http.StatusBadRequest)
-}
-
-func (mh *MetricHandler) StatusNotFound(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, "", http.StatusNotFound)
-}
-
-func (mh *MetricHandler) PostUpdate(w http.ResponseWriter, r *http.Request) {
-	// if r.Header.Get("Content-type") != "text/plain" {
-	// 	http.Error(w, "Неверный запрос", http.StatusNotFound)
+func (mh *MetricHandler) PostUpdate(c *gin.Context) {
+	// if c.Request.Header.Get("Content-type") != "text/plain" {
+	// 	c.String(http.StatusNotFound, "Неверный тип данных")
 	// 	return
 	// }
 
-	mType := r.PathValue("metricType")
-	mName := r.PathValue("metricName")
-	mValue := r.PathValue("metricValue")
+	mType := c.Param("metricType")
+	mName := c.Param("metricName")
+	mValue := c.Param("metricValue")
 
 	if mType == "" || mName == "" || mValue == "" {
-		http.Error(w, "Неверный запрос {"+mType+"}, {"+mName+"}, {"+mValue+"}", http.StatusNotFound)
+		c.String(http.StatusNotFound, "Неверный запрос {%s}, {%s}, {%s}", mType, mName, mValue)
 		return
 	}
 
 	err := mh.service.Set(mName, mType, mValue)
 	if err != nil {
-		http.Error(w, "Неверное значение метрики", http.StatusBadRequest)
+		c.String(http.StatusBadRequest, "Неверное значение метрики")
 		return
 	}
-	w.Header().Set("Content-type", "text/plain")
-	w.WriteHeader(http.StatusOK)
+	c.Header("Content-type", "text/plain")
+	c.String(http.StatusOK, "")
 }
 
-func (mh *MetricHandler) GetValue(w http.ResponseWriter, r *http.Request) {
-	// if r.Header.Get("Content-type") != "text/plain" {
-	// 	http.Error(w, "Неверный запрос", http.StatusNotFound)
+func (mh *MetricHandler) GetValue(c *gin.Context) {
+	// if  c.Request.Header.Get("Content-type") != "text/plain" {
+	// 	c.String(http.StatusNotFound, "Неверный тип данных")
 	// 	return
 	// }
 
-	mType := r.PathValue("metricType")
-	mName := r.PathValue("metricName")
+	mType := c.Param("metricType")
+	mName := c.Param("metricName")
 
 	if mType == "" || mName == "" {
-		http.Error(w, "Неверный запрос {"+mType+"}, {"+mName+"}", http.StatusNotFound)
+		c.String(http.StatusNotFound, "Неверный запрос {%s}, {%s}", mType, mName)
 		return
 	}
 
 	metric, err := mh.service.Get(mName, mType)
-	w.Header().Set("Content-type", "text/plain")
+	c.Header("Content-type", "text/plain")
 	if err == nil {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(metric))
+		c.String(http.StatusOK, metric)
 	} else {
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(metric))
+		c.String(http.StatusNotFound, metric)
 	}
 }
 
-func (mh *MetricHandler) GetAll(w http.ResponseWriter, r *http.Request) {
-	// if r.Header.Get("Content-type") != "text/html" {
-	// 	http.Error(w, "Неверный запрос", http.StatusNotFound)
+func (mh *MetricHandler) GetAll(c *gin.Context) {
+	// if c.Request.Header.Get("Content-type") != "text/html" {
+	//  c.String(http.StatusNotFound, "Неверный тип данных")
 	// 	return
 	// }
 	metrics := mh.service.GetAll()
@@ -87,6 +78,5 @@ func (mh *MetricHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 	}
 	body += "</table></body></html>"
 	//	w.Header().Set("Content-type", "text/html; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(body))
+	c.String(http.StatusOK, body)
 }
