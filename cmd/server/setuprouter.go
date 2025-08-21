@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"io"
 	"time"
 
@@ -32,16 +31,6 @@ func SetupRouter(metricsHandler handler.MetricHandler) *gin.Engine {
 		metricsHandler.PostUpdate(c)
 	})
 	return router
-}
-
-type bodyLogWriter struct {
-	gin.ResponseWriter
-	body *bytes.Buffer
-}
-
-func (w bodyLogWriter) Write(b []byte) (int, error) {
-	w.body.Write(b)                  // Capture the response body
-	return w.ResponseWriter.Write(b) // Write to the original ResponseWriter
 }
 
 func LoggerMiddleware() gin.HandlerFunc {
