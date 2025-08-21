@@ -1,11 +1,10 @@
 package main
 
 import (
-	"flag"
+	"fmt"
 
 	"github.com/2er9ey/go-musthave-metrics/internal/handler"
 	"github.com/2er9ey/go-musthave-metrics/internal/repository"
-	"github.com/2er9ey/go-musthave-metrics/internal/server"
 	"github.com/2er9ey/go-musthave-metrics/internal/service"
 )
 
@@ -13,11 +12,14 @@ func main() {
 	repo := repository.NewMemoryStorage()
 	service := service.NewMetricService(repo)
 	metricsHandler := handler.NewMetricHandler(service)
-	listenEndpoint := flag.String("a", "localhost:8080", "Адрес и порт для работы севрера")
 
-	flag.Parse()
+	config, configError := parseConfig()
 
-	router := server.SetupRouter(*metricsHandler)
+	if configError != nil {
+		fmt.Println("Ошибка чтения конфигурации", configError)
+		return
+	}
 
-	router.Run(*listenEndpoint)
+	router := SetupRouter(*metricsHandler)
+	router.Run(config.listenEndpoint)
 }
