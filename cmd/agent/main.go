@@ -1,7 +1,7 @@
 package main
 
 import (
-	"flag"
+	"fmt"
 	"net/http"
 	"sync"
 	"time"
@@ -11,22 +11,24 @@ import (
 )
 
 var mutex sync.Mutex
-var pollInterval = 2
-var reportInterval = 10
-var listenEndpoint = "localhost:8080"
+var config Config
 
 func main() {
-	flag.StringVar(&listenEndpoint, "a", "localhost:8080", "Адрес и порт для работы севрера")
-	flag.IntVar(&pollInterval, "p", 2, "Время опроса метрик")
-	flag.IntVar(&reportInterval, "r", 10, "Время отправки метрик на сервер")
-	flag.Parse()
+	var configError error
+
+	config, configError = parseConfig()
+
+	if configError != nil {
+		fmt.Println("Ошибка чтения конфигурации", configError)
+		return
+	}
 
 	cm := agent.NewCollectionMetrics()
 	var repo repository.MetricsRepositoryInterface = repository.NewMemoryStorage()
 
 	var wg sync.WaitGroup
 	go getMetrics(repo, cm)
-	time.Sleep(time.Duration(reportInterval) * time.Second)
+	time.Sleep(config.reportInterval)
 	sendMetrics(repo)
 	wg.Wait()
 	// fmt.Println("All workers are done!")
@@ -38,7 +40,7 @@ func getMetrics(repo repository.MetricsRepositoryInterface, collectMetrics *[]ag
 		agent.CollectorMetrics(repo, collectMetrics)
 		mutex.Unlock()
 		//		fmt.Println("Метрики собраны")
-		time.Sleep(time.Duration(pollInterval) * time.Second)
+		time.Sleep(config.pollInterval)
 	}
 }
 
@@ -48,7 +50,7 @@ func sendMetrics(repo repository.MetricsRepositoryInterface) {
 		metrics := repo.GetAllMetric()
 		mutex.Unlock()
 		for _, value := range metrics {
-			response, err := http.Post("http://"+listenEndpoint+"/update/"+value.MType+"/"+value.ID+"/"+value.String(), "text/plain", nil)
+			response, err := http.Post("http://"+config.serverEndpoint+"/update/"+value.MType+"/"+value.ID+"/"+value.String(), "text/plain", nil)
 			if err != nil {
 				//				fmt.Println("Ошибка отправки метрик")
 				break
@@ -56,6 +58,6 @@ func sendMetrics(repo repository.MetricsRepositoryInterface) {
 			response.Body.Close()
 		}
 		//		fmt.Println("Метрики отправлены")
-		time.Sleep(time.Duration(reportInterval) * time.Second)
+		time.Sleep(config.reportInterval)
 	}
 }
