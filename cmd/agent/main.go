@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/2er9ey/go-musthave-metrics/internal/agent"
-	"github.com/2er9ey/go-musthave-metrics/internal/handler"
 	"github.com/2er9ey/go-musthave-metrics/internal/repository"
 )
 
@@ -53,11 +52,7 @@ func sendMetrics(repo repository.MetricsRepositoryInterface) {
 		metrics := repo.GetAllMetric()
 		mutex.Unlock()
 		for _, value := range metrics {
-			var metric handler.MetricRequest
-			metric.ID = value.ID
-			metric.MType = value.MType
-			metric.Value = value.String()
-			jsonValue, _ := json.Marshal(metric)
+			jsonValue, _ := json.Marshal(value)
 			response, err := http.Post("http://"+config.serverEndpoint+"/update", "application/json", bytes.NewBuffer(jsonValue))
 			if err != nil {
 				//				fmt.Println("Ошибка отправки метрик")

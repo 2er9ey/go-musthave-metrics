@@ -6,6 +6,7 @@ import (
 	"sort"
 
 	"github.com/2er9ey/go-musthave-metrics/internal/logger"
+	"github.com/2er9ey/go-musthave-metrics/internal/models"
 	"github.com/2er9ey/go-musthave-metrics/internal/service"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -42,6 +43,7 @@ func (mh *MetricHandler) PostUpdate(c *gin.Context) {
 
 	err := mh.service.Set(mName, mType, mValue)
 	if err != nil {
+		logger.Log.Debug("cannot set metric", zap.Error(err))
 		c.String(http.StatusBadRequest, "Неверное значение метрики")
 		return
 	}
@@ -56,7 +58,7 @@ func (mh *MetricHandler) PostUpdateJSON(c *gin.Context) {
 		return
 	}
 
-	var req MetricRequest
+	var req models.Metrics
 	dec := json.NewDecoder(c.Request.Body)
 	if err := dec.Decode(&req); err != nil {
 		logger.Log.Debug("cannot decode request JSON body", zap.Error(err))
@@ -64,17 +66,15 @@ func (mh *MetricHandler) PostUpdateJSON(c *gin.Context) {
 		return
 	}
 
-	mType := req.MType
-	mName := req.ID
-	mValue := req.Value
-
-	if mType == "" || mName == "" || mValue == "" {
-		c.String(http.StatusNotFound, "Неверный запрос {%s}, {%s}, {%s}", mType, mName, mValue)
+	if req.MType == "" || req.ID == "" {
+		c.String(http.StatusNotFound, "Неверный запрос {%s}, {%s}, {%s}", req.MType, req.ID, req.String())
 		return
 	}
 
-	err := mh.service.Set(mName, mType, mValue)
+	err := mh.service.Set(req.ID, req.MType, req.String())
 	if err != nil {
+		logger.Log.Debug("cannot set metric", zap.Error(err), zap.String("req.String()", req.String()),
+			zap.String("req.MType", req.MType), zap.String("req.ID", req.ID))
 		c.String(http.StatusBadRequest, "Неверное значение метрики")
 		return
 	}
@@ -112,7 +112,7 @@ func (mh *MetricHandler) GetValueJSON(c *gin.Context) {
 		return
 	}
 
-	var req MetricRequest
+	var req models.Metrics
 	dec := json.NewDecoder(c.Request.Body)
 	if err := dec.Decode(&req); err != nil {
 		logger.Log.Debug("cannot decode request JSON body", zap.Error(err))
@@ -120,23 +120,16 @@ func (mh *MetricHandler) GetValueJSON(c *gin.Context) {
 		return
 	}
 
-	mType := req.MType
-	mName := req.ID
-
-	if mType == "" || mName == "" {
-		c.String(http.StatusNotFound, "Неверный запрос {%s}, {%s}", mType, mName)
+	if req.MType == "" || req.ID == "" {
+		c.String(http.StatusNotFound, "Неверный запрос {%s}, {%s}", req.MType, req.ID)
 		return
 	}
 
-	metric, err := mh.service.Get(mName, mType)
+	metric, err := mh.service.Get(req.MType, req.ID)
 	c.Header("Content-type", "application/json")
 	if err == nil {
-		req.MType = mType
-		req.ID = mName
-		req.Value = metric
-
 		enc := json.NewEncoder(c.Writer)
-		if err := enc.Encode(req); err != nil {
+		if err := enc.Encode(metric); err != nil {
 			logger.Log.Debug("error encoding response", zap.Error(err))
 			return
 		}
