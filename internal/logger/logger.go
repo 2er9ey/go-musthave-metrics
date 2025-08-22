@@ -1,8 +1,9 @@
 package logger
 
 import (
-	"net/http"
+	"time"
 
+	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
 
@@ -32,13 +33,15 @@ func Initialize(level string) error {
 	return nil
 }
 
-// RequestLogger — middleware-логер для входящих HTTP-запросов.
-func RequestLogger(h http.HandlerFunc) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		Log.Debug("got incoming HTTP request",
-			zap.String("method", r.Method),
-			zap.String("path", r.URL.Path),
-		)
-		h(w, r)
-	})
+func LoggerMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		start := time.Now()
+		c.Next()
+		duration := time.Since(start)
+		statusCode := c.Writer.Status()
+		responseLen := c.Writer.Size()
+		Log.Info("Incoming Request:", zap.String("method", c.Request.Method), zap.String("URI", c.Request.URL.Path), zap.String("elapsedTime", duration.String()))
+		Log.Info("Outging reply:",
+			zap.Int("statusCode", statusCode), zap.Int("responseLen", responseLen))
+	}
 }
