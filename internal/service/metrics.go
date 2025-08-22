@@ -49,6 +49,10 @@ func (ms *MetricService) Get(mID string, mType string) (string, error) {
 	return ms.repo.GetString(mID, mType)
 }
 
+func (ms *MetricService) GetMetric(mID string, mType string) (models.Metrics, error) {
+	return ms.repo.GetMetric(mID, mType)
+}
+
 func (ms *MetricService) GetAll() []models.Metrics {
 	return ms.repo.GetAllMetric()
 }

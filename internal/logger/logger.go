@@ -40,7 +40,10 @@ func LoggerMiddleware() gin.HandlerFunc {
 		duration := time.Since(start)
 		statusCode := c.Writer.Status()
 		responseLen := c.Writer.Size()
-		Log.Info("Incoming Request:", zap.String("method", c.Request.Method), zap.String("URI", c.Request.URL.Path), zap.String("elapsedTime", duration.String()))
+		Log.Info("Incoming Request:",
+			zap.String("method", c.Request.Method),
+			zap.String("URI", c.Request.URL.Path),
+			zap.String("elapsedTime", duration.String()))
 		Log.Info("Outging reply:",
 			zap.Int("statusCode", statusCode), zap.Int("responseLen", responseLen))
 	}

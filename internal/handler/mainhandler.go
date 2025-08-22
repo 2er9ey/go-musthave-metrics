@@ -67,6 +67,8 @@ func (mh *MetricHandler) PostUpdateJSON(c *gin.Context) {
 	}
 
 	if req.MType == "" || req.ID == "" {
+		logger.Log.Debug("metric is incorrect", zap.String("req.String()", req.String()),
+			zap.String("req.MType", req.MType), zap.String("req.ID", req.ID))
 		c.String(http.StatusNotFound, "Неверный запрос {%s}, {%s}, {%s}", req.MType, req.ID, req.String())
 		return
 	}
@@ -121,11 +123,13 @@ func (mh *MetricHandler) GetValueJSON(c *gin.Context) {
 	}
 
 	if req.MType == "" || req.ID == "" {
+		logger.Log.Debug("metric is incorrect", zap.String("req.String()", req.String()),
+			zap.String("req.MType", req.MType), zap.String("req.ID", req.ID))
 		c.String(http.StatusNotFound, "Неверный запрос {%s}, {%s}", req.MType, req.ID)
 		return
 	}
 
-	metric, err := mh.service.Get(req.MType, req.ID)
+	metric, err := mh.service.GetMetric(req.ID, req.MType)
 	c.Header("Content-type", "application/json")
 	if err == nil {
 		enc := json.NewEncoder(c.Writer)
