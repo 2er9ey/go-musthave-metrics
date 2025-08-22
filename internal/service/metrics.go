@@ -1,7 +1,7 @@
 package service
 
 import (
-	"os"
+	"errors"
 	"strconv"
 
 	"github.com/2er9ey/go-musthave-metrics/internal/models"
@@ -37,7 +37,7 @@ func (ms *MetricService) Set(mID string, mType string, mValue string) error {
 			err = errConv
 		}
 	default:
-		err = os.ErrInvalid
+		err = errors.New("invalid metric type (" + mType + ")")
 	}
 	if err == nil {
 		return ms.repo.Set(metric)
@@ -47,6 +47,10 @@ func (ms *MetricService) Set(mID string, mType string, mValue string) error {
 
 func (ms *MetricService) Get(mID string, mType string) (string, error) {
 	return ms.repo.GetString(mID, mType)
+}
+
+func (ms *MetricService) GetMetric(mID string, mType string) (models.Metrics, error) {
+	return ms.repo.GetMetric(mID, mType)
 }
 
 func (ms *MetricService) GetAll() []models.Metrics {
