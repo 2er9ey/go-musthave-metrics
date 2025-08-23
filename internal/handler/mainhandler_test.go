@@ -42,7 +42,7 @@ func TestMainHandler(t *testing.T) {
 	}
 
 	repo := repository.NewMemoryStorage()
-	serv := service.NewMetricService(repo)
+	serv := service.NewMetricService(repo, 1, "")
 	metricsHandler := NewMetricHandler(serv)
 
 	router := setupRouter(*metricsHandler)
