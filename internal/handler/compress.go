@@ -105,7 +105,7 @@ func GzipMiddleware() gin.HandlerFunc {
 				defer gz.Close()
 			} else {
 				logger.Log.Debug("Content should not be compressed")
-				c.Next()
+				originalWriter.Write(bw.buffer.Bytes())
 			}
 		} else {
 			logger.Log.Debug("No accepter compression")
