@@ -22,20 +22,23 @@ func SetupRouter(metricsHandler handler.MetricHandler) *gin.Engine {
 		metricsHandler.GetAll(c)
 	})
 
-	router.GET("/value/:metricType/:metricName", func(c *gin.Context) {
+	valueGroup := router.Group("/value")
+	valueGroup.GET("/:metricType/:metricName", func(c *gin.Context) {
 		metricsHandler.GetValue(c)
 	})
+	valueGroup.POST("/", func(c *gin.Context) {
+		metricsHandler.GetValueJSON(c)
+	})
 
-	router.POST("/update/:metricType/:metricName/:metricValue", func(c *gin.Context) {
+	updateGroup := router.Group("/update")
+
+	updateGroup.POST("/:metricType/:metricName/:metricValue", func(c *gin.Context) {
 		metricsHandler.PostUpdate(c)
 	})
 
-	router.POST("/update", func(c *gin.Context) {
+	updateGroup.POST("/", func(c *gin.Context) {
 		metricsHandler.PostUpdateJSON(c)
 	})
 
-	router.POST("/value", func(c *gin.Context) {
-		metricsHandler.GetValueJSON(c)
-	})
 	return router
 }
