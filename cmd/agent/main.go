@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -31,7 +32,7 @@ func main() {
 	var wg sync.WaitGroup
 	go getMetrics(repo, cm)
 	time.Sleep(config.reportInterval)
-	sendMetrics(repo)
+	sendMetricsCompressed(repo)
 	wg.Wait()
 	// fmt.Println("All workers are done!")
 }
@@ -59,6 +60,32 @@ func sendMetrics(repo repository.MetricsRepositoryInterface) {
 				break
 			}
 			response.Body.Close()
+		}
+		//		fmt.Println("Метрики отправлены")
+		time.Sleep(config.reportInterval)
+	}
+}
+
+func sendMetricsCompressed(repo repository.MetricsRepositoryInterface) {
+	for {
+		mutex.Lock()
+		metrics := repo.GetAllMetric()
+		mutex.Unlock()
+		for _, value := range metrics {
+			jsonValue, _ := json.Marshal(value)
+			buf := bytes.NewBuffer(nil)
+			zb := gzip.NewWriter(buf)
+			zb.Write(jsonValue)
+			zb.Close()
+			request, err := http.NewRequest("POST", "http://"+config.serverEndpoint+"/update", buf)
+			if err != nil {
+				//				fmt.Println("Ошибка отправки метрик")
+				break
+			}
+			request.Header.Set("Content-Encoding", "gzip")
+			request.Header.Set("Content-type", "application/json")
+			resp, _ := http.DefaultClient.Do(request)
+			resp.Body.Close()
 		}
 		//		fmt.Println("Метрики отправлены")
 		time.Sleep(config.reportInterval)

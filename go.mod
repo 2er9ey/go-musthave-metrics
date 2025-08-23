@@ -4,7 +4,10 @@ go 1.24.5
 
 require github.com/gin-gonic/gin v1.10.1
 
-require go.uber.org/multierr v1.10.0 // indirect
+require (
+	github.com/gin-contrib/gzip v1.2.3 // indirect
+	go.uber.org/multierr v1.10.0 // indirect
+)
 
 require (
 	github.com/bytedance/sonic v1.14.0 // indirect
