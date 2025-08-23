@@ -16,7 +16,7 @@ func SetupRouter(metricsHandler handler.MetricHandler) *gin.Engine {
 
 	router.Use(gin.Recovery())
 	router.Use(logger.LoggerMiddleware())
-	router.Use(handler.GzipMiddleware())
+	//	router.Use(handler.GzipMiddleware())
 
 	router.GET("/", func(c *gin.Context) {
 		metricsHandler.GetAll(c)
