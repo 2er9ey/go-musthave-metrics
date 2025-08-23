@@ -7,4 +7,6 @@ type MetricsRepositoryInterface interface {
 	GetString(metricKey string, metricType string) (string, error)
 	GetMetric(metricKey string, metricType string) (models.Metrics, error)
 	GetAllMetric() []models.Metrics
+	LoadMetrics(string) error
+	SaveMetrics(string) error
 }

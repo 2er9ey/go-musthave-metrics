@@ -7,4 +7,7 @@ type MetricServiceInterface interface {
 	Get(string, string) (string, error)
 	GetMetric(string, string) (models.Metrics, error)
 	GetAll() []models.Metrics
+	LoadMetrics(string) error
+	SaveMetrics(string) error
+	RunSaver()
 }

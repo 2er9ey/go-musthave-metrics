@@ -11,10 +11,6 @@ import (
 )
 
 func main() {
-	repo := repository.NewMemoryStorage()
-	service := service.NewMetricService(repo)
-	metricsHandler := handler.NewMetricHandler(service)
-
 	config, configError := parseConfig()
 
 	if configError != nil {
@@ -26,6 +22,16 @@ func main() {
 		fmt.Println("Ошибка журнала", err)
 		return
 	}
+
+	repo := repository.NewMemoryStorage()
+	service := service.NewMetricService(repo, config.storeInterval, config.fileStoragePath)
+	if config.restoreMetrics {
+		service.LoadMetrics(config.fileStoragePath)
+	}
+	if config.storeInterval > 0 {
+		service.RunSaver()
+	}
+	metricsHandler := handler.NewMetricHandler(service)
 
 	router := SetupRouter(*metricsHandler)
 	logger.Log.Info("Startin server listen on", zap.String("listenEndpoint", config.listenEndpoint))
