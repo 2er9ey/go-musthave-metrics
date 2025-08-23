@@ -79,12 +79,14 @@ func sendMetricsCompressed(repo repository.MetricsRepositoryInterface) {
 			zb.Close()
 			request, err := http.NewRequest("POST", "http://"+config.serverEndpoint+"/update", buf)
 			if err != nil {
-				//				fmt.Println("Ошибка отправки метрик")
 				break
 			}
 			request.Header.Set("Content-Encoding", "gzip")
 			request.Header.Set("Content-type", "application/json")
-			resp, _ := http.DefaultClient.Do(request)
+			resp, err2 := http.DefaultClient.Do(request)
+			if err2 != nil {
+				break
+			}
 			resp.Body.Close()
 		}
 		//		fmt.Println("Метрики отправлены")
