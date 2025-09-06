@@ -30,7 +30,8 @@ func parseConfig() (Config, error) {
 	flag.StringVar(&conf.logLevel, "l", "info", "Уровень журналирования")
 	flag.IntVar(&conf.storeInterval, "i", 300, "Интервал сохранения значений метрик")
 	flag.StringVar(&conf.fileStoragePath, "f", "metrics.dat", "Имя файла для сохранения значения метрик")
-	flag.StringVar(&conf.databaseDSN, "d", "host=127.0.0.1 user=video password=XXXXXXXX dbname=video sslmode=disable", "Строка подключения к базе данных")
+	//	flag.StringVar(&conf.databaseDSN, "d", "host=127.0.0.1 user=video password=XXXXXXXX dbname=video sslmode=disable", "Строка подключения к базе данных")
+	flag.StringVar(&conf.databaseDSN, "d", "", "Строка подключения к базе данных")
 	flag.BoolVar(&conf.restoreMetrics, "r", false, "Считать значения метрик при старте сервера")
 	flag.Parse()
 
