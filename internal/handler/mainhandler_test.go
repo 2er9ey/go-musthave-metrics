@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -40,9 +41,11 @@ func TestMainHandler(t *testing.T) {
 			request: "/update",
 		},
 	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	repo := repository.NewMemoryStorage()
-	serv := service.NewMetricService(repo, 1, "")
+	serv := service.NewMetricService(ctx, repo, 1, "", "")
 	metricsHandler := NewMetricHandler(serv)
 
 	router := setupRouter(*metricsHandler)
