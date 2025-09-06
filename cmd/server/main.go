@@ -26,6 +26,8 @@ func main() {
 		return
 	}
 
+	logger.Log.Info("Config: ", zap.String("databaseDSN", config.databaseDSN))
+
 	repo := repository.NewMemoryStorage()
 	service := service.NewMetricService(ctx, repo, config.storeInterval, config.fileStoragePath, config.databaseDSN)
 	if config.restoreMetrics {

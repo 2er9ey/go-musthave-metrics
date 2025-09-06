@@ -47,6 +47,10 @@ func parseConfig() (Config, error) {
 		conf.fileStoragePath = cfgEnv.FileStoragePath
 	}
 
+	if cfgEnv.DatabaseDSN != "" {
+		conf.databaseDSN = cfgEnv.DatabaseDSN
+	}
+
 	if cfgEnv.StoreInterval != "" {
 		conf.storeInterval, _ = strconv.Atoi(cfgEnv.StoreInterval)
 	}
