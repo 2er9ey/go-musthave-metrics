@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"sort"
 
@@ -163,6 +164,7 @@ func (mh *MetricHandler) GetAll(c *gin.Context) {
 
 func (mh *MetricHandler) DBChekConnection(c *gin.Context) {
 	res, err := mh.service.DBChekConnection()
+	fmt.Println("Check result = ", res, err)
 	if !res {
 		c.String(http.StatusInternalServerError, err.Error())
 		return
