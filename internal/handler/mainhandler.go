@@ -160,3 +160,11 @@ func (mh *MetricHandler) GetAll(c *gin.Context) {
 	c.Writer.Header().Set("Content-type", "text/html; charset=utf-8")
 	c.String(http.StatusOK, body)
 }
+
+func (mh *MetricHandler) DBChekConnection(c *gin.Context) {
+	res, err := mh.service.DBChekConnection()
+	if !res {
+		c.String(http.StatusInternalServerError, err.Error())
+	}
+	c.String(http.StatusOK, "OK")
+}

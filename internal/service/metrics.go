@@ -1,9 +1,14 @@
 package service
 
 import (
+	"context"
+	"database/sql"
 	"errors"
+	"fmt"
 	"strconv"
 	"time"
+
+	_ "github.com/jackc/pgx/v5/stdlib"
 
 	"github.com/2er9ey/go-musthave-metrics/internal/logger"
 	"github.com/2er9ey/go-musthave-metrics/internal/models"
@@ -11,17 +16,27 @@ import (
 )
 
 type MetricService struct {
+	ctx             context.Context
 	repo            repository.MetricsRepositoryInterface
 	saveInterval    int
 	storageFilename string
+	databaseDSN     string
+	db              *sql.DB
 }
 
-func NewMetricService(repo repository.MetricsRepositoryInterface, saveInterval int,
-	storageFilename string) *MetricService {
+func NewMetricService(ctx context.Context, repo repository.MetricsRepositoryInterface, saveInterval int,
+	storageFilename string, databaseDSN string) *MetricService {
+	db, err := sql.Open("pgx", databaseDSN)
+	if err != nil {
+		panic(err)
+	}
 	return &MetricService{
+		ctx:             ctx,
 		repo:            repo,
 		saveInterval:    saveInterval,
 		storageFilename: storageFilename,
+		databaseDSN:     databaseDSN,
+		db:              db,
 	}
 }
 
@@ -82,9 +97,26 @@ func (ms *MetricService) RunSaver() {
 	}
 	go func() {
 		for {
-			time.Sleep(time.Duration(ms.saveInterval) * time.Second)
+			select {
+			case <-ms.ctx.Done():
+				return
+			default:
+				time.Sleep(time.Duration(ms.saveInterval) * time.Second)
+			}
 			logger.Log.Debug("Saving metrics")
 			ms.SaveMetrics(ms.storageFilename)
 		}
 	}()
+}
+
+func (ms *MetricService) DBChekConnection() (bool, error) {
+	ctx, cancel := context.WithTimeout(ms.ctx, 1*time.Second)
+	defer cancel()
+
+	fmt.Println("DBString = ", ms.databaseDSN)
+
+	if err := ms.db.PingContext(ctx); err != nil {
+		return false, err
+	}
+	return true, nil
 }

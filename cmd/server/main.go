@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/2er9ey/go-musthave-metrics/internal/handler"
@@ -12,6 +13,8 @@ import (
 
 func main() {
 	config, configError := parseConfig()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	if configError != nil {
 		fmt.Println("Ошибка чтения конфигурации", configError)
@@ -24,7 +27,7 @@ func main() {
 	}
 
 	repo := repository.NewMemoryStorage()
-	service := service.NewMetricService(repo, config.storeInterval, config.fileStoragePath)
+	service := service.NewMetricService(ctx, repo, config.storeInterval, config.fileStoragePath, config.databaseDSN)
 	if config.restoreMetrics {
 		service.LoadMetrics(config.fileStoragePath)
 	}
@@ -34,6 +37,6 @@ func main() {
 	metricsHandler := handler.NewMetricHandler(service)
 
 	router := SetupRouter(*metricsHandler)
-	logger.Log.Info("Startin server listen on", zap.String("listenEndpoint", config.listenEndpoint))
+	logger.Log.Info("Starting server listen on", zap.String("listenEndpoint", config.listenEndpoint))
 	router.Run(config.listenEndpoint)
 }

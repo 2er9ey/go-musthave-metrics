@@ -9,5 +9,6 @@ type MetricServiceInterface interface {
 	GetAll() []models.Metrics
 	LoadMetrics(string) error
 	SaveMetrics(string) error
+	DBChekConnection() (bool, error)
 	RunSaver()
 }

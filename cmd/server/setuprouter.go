@@ -22,6 +22,10 @@ func SetupRouter(metricsHandler handler.MetricHandler) *gin.Engine {
 		metricsHandler.GetAll(c)
 	})
 
+	router.GET("/ping", func(c *gin.Context) {
+		metricsHandler.DBChekConnection(c)
+	})
+
 	valueGroup := router.Group("/value")
 	valueGroup.GET("/:metricType/:metricName", func(c *gin.Context) {
 		metricsHandler.GetValue(c)
