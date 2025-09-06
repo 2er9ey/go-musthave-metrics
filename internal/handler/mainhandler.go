@@ -165,6 +165,7 @@ func (mh *MetricHandler) DBChekConnection(c *gin.Context) {
 	res, err := mh.service.DBChekConnection()
 	if !res {
 		c.String(http.StatusInternalServerError, err.Error())
+		return
 	}
 	c.String(http.StatusOK, "OK")
 }
