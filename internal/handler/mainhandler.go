@@ -27,6 +27,27 @@ type MetricRequest struct {
 	Value string `json:"value,omitempty"`
 }
 
+type MetricRequestBunch []MetricRequest
+
+// UnmarshalJSON implements the json.Unmarshaler interface for Items.
+func (i *MetricRequestBunch) UnmarshalJSON(data []byte) error {
+	// Try to unmarshal as an array first.
+	var arr []MetricRequest
+	if err := json.Unmarshal(data, &arr); err == nil {
+		*i = arr
+		return nil
+	}
+
+	// If it's not an array, try to unmarshal as a single object.
+	var single MetricRequest
+	if err := json.Unmarshal(data, &single); err == nil {
+		*i = []MetricRequest{single} // Convert single item to a slice.
+		return nil
+	}
+
+	return fmt.Errorf("cannot unmarshal JSON into Items: %s", string(data))
+}
+
 func (mh *MetricHandler) PostUpdate(c *gin.Context) {
 	// if c.Request.Header.Get("Content-type") != "text/plain" {
 	// 	c.String(http.StatusNotFound, "Неверный тип данных")
@@ -61,49 +82,30 @@ func (mh *MetricHandler) PostUpdateJSON(c *gin.Context) {
 
 	dec := json.NewDecoder(c.Request.Body)
 
-	token, err := dec.Token()
-	if err != nil {
-		fmt.Println("Error reading token for array:", err)
+	var req MetricRequestBunch
+	if err := dec.Decode(&req); err != nil {
+		logger.Log.Debug("cannot decode request JSON body", zap.Error(err))
+		c.Writer.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	if delim, ok := token.(json.Delim); ok && delim == '[' {
-		var req []models.Metrics
-		if err := dec.Decode(&req); err != nil {
-			logger.Log.Debug("cannot decode request JSON body", zap.Error(err))
-			c.Writer.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		err := mh.service.SetBunch(req)
+	// var metrics models.Metrics
+	for _, item := range req {
+		err := mh.service.Set(item.ID, item.MType, item.Value)
 		if err != nil {
-			logger.Log.Debug("cannot set bunch of metric", zap.Error(err))
+			logger.Log.Debug("cannot set of metric", zap.Error(err))
 			c.String(http.StatusBadRequest, "Неверное значение метрики")
 			return
 		}
-	} else {
-		logger.Log.Info("Update from one element")
-		var req models.Metrics
-		if err := dec.Decode(&req); err != nil {
-			logger.Log.Debug("cannot decode request JSON body", zap.Error(err))
-			c.Writer.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		if req.MType == "" || req.ID == "" {
-			logger.Log.Debug("metric is incorrect", zap.String("req.String()", req.String()),
-				zap.String("req.MType", req.MType), zap.String("req.ID", req.ID))
-			c.String(http.StatusNotFound, "Неверный запрос {%s}, {%s}, {%s}", req.MType, req.ID, req.String())
-			return
-		}
-
-		err := mh.service.Set(req.ID, req.MType, req.String())
-		if err != nil {
-			logger.Log.Debug("cannot set metric", zap.Error(err), zap.String("req.String()", req.String()),
-				zap.String("req.MType", req.MType), zap.String("req.ID", req.ID))
-			c.String(http.StatusBadRequest, "Неверное значение метрики")
-			return
-		}
+		// 	// metrics = append(metrics, metric)
 	}
+
+	// err := mh.service.SetBunch(metrics)
+	// if err != nil {
+	// 	logger.Log.Debug("cannot set bunch of metric", zap.Error(err))
+	// 	c.String(http.StatusBadRequest, "Неверное значение метрики")
+	// 	return
+	// }
 	c.Header("Content-type", "application/json")
 	c.String(http.StatusOK, "{}")
 }
