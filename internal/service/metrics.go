@@ -120,3 +120,7 @@ func (ms *MetricService) DBChekConnection() (bool, error) {
 	}
 	return true, nil
 }
+
+func (ms *MetricService) SetBunch(metrics []models.Metrics) error {
+	return ms.repo.SetBunch(metrics)
+}

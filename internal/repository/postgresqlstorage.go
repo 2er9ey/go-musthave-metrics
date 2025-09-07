@@ -1,8 +1,13 @@
 package repository
 
 import (
+	"bufio"
 	"context"
 	"database/sql"
+	"encoding/json"
+	"errors"
+	"os"
+	"strings"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 
@@ -53,8 +58,33 @@ func (ms *PostreSQLStorage) Set(m models.Metrics) error {
 	return nil
 }
 
+func (ms *PostreSQLStorage) SetBunch(metrics []models.Metrics) error {
+	tx, err := ms.db.Begin()
+	if err != nil {
+		return err
+	}
+	for _, m := range metrics {
+		err := ms.Set(m)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
 func (ms *PostreSQLStorage) GetMetric(metricKey string, metricType string) (models.Metrics, error) {
-	return models.Metrics{}, nil
+	row := ms.db.QueryRowContext(ms.ctx, "SELECT metric_id, metric_type, metric_delta, metric_value, metric_hash from metrics where metric_id = $1 and metric_type = $2", metricKey, metricType)
+	if row.Err() != nil {
+		return models.Metrics{}, row.Err()
+	}
+	var metric models.Metrics
+	err := row.Scan(&metric.ID, &metric.MType, &metric.Delta, &metric.Value, &metric.Hash)
+	if err != nil {
+		return models.Metrics{}, err
+	}
+
+	return metric, nil
 
 }
 
@@ -86,9 +116,56 @@ func (ms *PostreSQLStorage) GetAllMetric() []models.Metrics {
 }
 
 func (ms *PostreSQLStorage) LoadMetrics(filename string) error {
-	return nil
+	file, err := os.OpenFile(filename, os.O_RDONLY, 0666)
+	if err != nil {
+		return errors.New("can't open file")
+	}
+
+	buf := bufio.NewReader(file)
+	line, err := buf.ReadBytes('\n')
+	if err != nil {
+		return err
+	}
+
+	if string(line) != "[\n" {
+		return errors.New("wrong file")
+	}
+
+	var metrics []models.Metrics
+
+	for {
+		var metric models.Metrics
+		line, err = buf.ReadBytes('\n')
+		if err != nil {
+			return err
+		}
+		stringLine := strings.TrimRight(strings.TrimSpace(string(line)), ",")
+		if stringLine == "]" {
+			break
+		}
+		json.Unmarshal([]byte(stringLine), &metric)
+		metrics = append(metrics, metric)
+	}
+	return ms.SetBunch(metrics)
 }
 
 func (ms *PostreSQLStorage) SaveMetrics(filename string) error {
+	file, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE, 0666)
+	if err != nil {
+		return err
+	}
+
+	metrics := ms.GetAllMetric()
+
+	file.WriteString("[\n")
+
+	for _, value := range metrics {
+		jsonString, _ := json.Marshal(value)
+		file.WriteString("  ")
+		file.Write(jsonString)
+		file.WriteString(",\n")
+	}
+	file.WriteString("]\n")
+	file.Close()
 	return nil
 }

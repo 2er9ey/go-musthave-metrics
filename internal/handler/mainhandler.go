@@ -59,27 +59,50 @@ func (mh *MetricHandler) PostUpdateJSON(c *gin.Context) {
 		return
 	}
 
-	var req models.Metrics
 	dec := json.NewDecoder(c.Request.Body)
-	if err := dec.Decode(&req); err != nil {
-		logger.Log.Debug("cannot decode request JSON body", zap.Error(err))
-		c.Writer.WriteHeader(http.StatusInternalServerError)
-		return
-	}
 
-	if req.MType == "" || req.ID == "" {
-		logger.Log.Debug("metric is incorrect", zap.String("req.String()", req.String()),
-			zap.String("req.MType", req.MType), zap.String("req.ID", req.ID))
-		c.String(http.StatusNotFound, "Неверный запрос {%s}, {%s}, {%s}", req.MType, req.ID, req.String())
-		return
-	}
-
-	err := mh.service.Set(req.ID, req.MType, req.String())
+	token, err := dec.Token()
 	if err != nil {
-		logger.Log.Debug("cannot set metric", zap.Error(err), zap.String("req.String()", req.String()),
-			zap.String("req.MType", req.MType), zap.String("req.ID", req.ID))
-		c.String(http.StatusBadRequest, "Неверное значение метрики")
+		fmt.Println("Error reading token for array:", err)
 		return
+	}
+
+	if delim, ok := token.(json.Delim); ok && delim == '[' {
+		var req []models.Metrics
+		if err := dec.Decode(&req); err != nil {
+			logger.Log.Debug("cannot decode request JSON body", zap.Error(err))
+			c.Writer.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		err := mh.service.SetBunch(req)
+		if err != nil {
+			logger.Log.Debug("cannot set bunch of metric", zap.Error(err))
+			c.String(http.StatusBadRequest, "Неверное значение метрики")
+			return
+		}
+	} else {
+		logger.Log.Info("Update from one element")
+		var req models.Metrics
+		if err := dec.Decode(&req); err != nil {
+			logger.Log.Debug("cannot decode request JSON body", zap.Error(err))
+			c.Writer.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		if req.MType == "" || req.ID == "" {
+			logger.Log.Debug("metric is incorrect", zap.String("req.String()", req.String()),
+				zap.String("req.MType", req.MType), zap.String("req.ID", req.ID))
+			c.String(http.StatusNotFound, "Неверный запрос {%s}, {%s}, {%s}", req.MType, req.ID, req.String())
+			return
+		}
+
+		err := mh.service.Set(req.ID, req.MType, req.String())
+		if err != nil {
+			logger.Log.Debug("cannot set metric", zap.Error(err), zap.String("req.String()", req.String()),
+				zap.String("req.MType", req.MType), zap.String("req.ID", req.ID))
+			c.String(http.StatusBadRequest, "Неверное значение метрики")
+			return
+		}
 	}
 	c.Header("Content-type", "application/json")
 	c.String(http.StatusOK, "{}")

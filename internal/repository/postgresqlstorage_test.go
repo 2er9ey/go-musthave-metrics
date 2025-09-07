@@ -38,7 +38,7 @@ func TestSetMetric(t *testing.T) {
 	defer ps.Close()
 
 	err := ps.Set(metric)
-	assert.NotNil(t, err, "Must be not nil")
+	assert.Nil(t, err, "Must be nil")
 }
 
 func TestCreateTables(t *testing.T) {
@@ -46,5 +46,25 @@ func TestCreateTables(t *testing.T) {
 	// defer ps.Close()
 
 	// err := ps.CreateTables()
+	// assert.Nil(t, err, "Must be nil")
+}
+
+func TestGetAllMetric(t *testing.T) {
+	// ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	// defer cancel()
+	// ps := NewPostgreSQLStorage(ctx, "host=127.0.0.1 user=video password=XXXXXXXX dbname=video sslmode=disable")
+	// defer ps.Close()
+
+	// metrics := ps.GetAllMetric()
+	// assert.NotNil(t, err, "Must be not nil")
+}
+
+func TestSaveMetric(t *testing.T) {
+	// ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	// defer cancel()
+	// ps := NewPostgreSQLStorage(ctx, "host=127.0.0.1 user=video password=XXXXXXXX dbname=video sslmode=disable")
+	// defer ps.Close()
+
+	// err := ps.SaveMetrics("./x.dat")
 	// assert.Nil(t, err, "Must be nil")
 }

@@ -53,6 +53,16 @@ func (ms *MemoryStorage) Set(m models.Metrics) error {
 	return nil
 }
 
+func (ms *MemoryStorage) SetBunch(metrics []models.Metrics) error {
+	for _, m := range metrics {
+		err := ms.Set(m)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (ms *MemoryStorage) GetMetric(metricKey string, metricType string) (models.Metrics, error) {
 	var metric models.Metrics
 	var exists bool
@@ -111,6 +121,8 @@ func (ms *MemoryStorage) LoadMetrics(filename string) error {
 		return errors.New("wrong file")
 	}
 
+	var metrics []models.Metrics
+
 	for {
 		var metric models.Metrics
 		line, err = buf.ReadBytes('\n')
@@ -122,16 +134,9 @@ func (ms *MemoryStorage) LoadMetrics(filename string) error {
 			break
 		}
 		json.Unmarshal([]byte(stringLine), &metric)
-		switch metric.MType {
-		case models.Counter:
-			ms.metricsCounter[metric.ID] = metric
-		case models.Gauge:
-			ms.metricsGauge[metric.ID] = metric
-		default:
-			return errors.New("wrong file")
-		}
+		metrics = append(metrics, metric)
 	}
-	return nil
+	return ms.SetBunch(metrics)
 }
 
 func (ms *MemoryStorage) SaveMetrics(filename string) error {
