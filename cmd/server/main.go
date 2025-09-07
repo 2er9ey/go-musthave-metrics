@@ -28,12 +28,17 @@ func main() {
 
 	logger.Log.Info("Config: ", zap.String("databaseDSN", config.databaseDSN))
 
-	repo := repository.NewMemoryStorage()
+	var repo repository.MetricsRepositoryInterface
+	if config.databaseDSN == "" {
+		repo = repository.NewMemoryStorage()
+	} else {
+		repo = repository.NewPostgreSQLStorage()
+	}
 	service := service.NewMetricService(ctx, repo, config.storeInterval, config.fileStoragePath, config.databaseDSN)
 	if config.restoreMetrics {
 		service.LoadMetrics(config.fileStoragePath)
 	}
-	if config.storeInterval > 0 {
+	if config.databaseDSN == "" && config.storeInterval > 0 {
 		service.RunSaver()
 	}
 	metricsHandler := handler.NewMetricHandler(service)

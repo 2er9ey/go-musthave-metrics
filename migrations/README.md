@@ -9,3 +9,5 @@
 - откатывать изменения при необходимости
 
 Тема миграций будет подробно изучаться дальше по курсу.
+
+migrate create -ext sql -dir ./migrations -tz "Asia/Novosibirsk" create_metrics_table
