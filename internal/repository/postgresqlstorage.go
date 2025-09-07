@@ -64,7 +64,7 @@ func (ms *PostreSQLStorage) GetString(metricKey string, metricType string) (stri
 
 func (ms *PostreSQLStorage) GetAllMetric() []models.Metrics {
 	rows, err := ms.db.QueryContext(ms.ctx, "SELECT metric_id, metric_type, metric_delta, metric_value, metric_hash from metrics ORDER BY id")
-	if err != nil {
+	if err != nil || rows.Err() != nil {
 		return nil
 	}
 
