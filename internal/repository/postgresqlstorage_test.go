@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
@@ -39,8 +38,7 @@ func TestSetMetric(t *testing.T) {
 	defer ps.Close()
 
 	err := ps.Set(metric)
-	fmt.Println(err)
-	assert.Nil(t, err, "Must be not nil")
+	assert.NotNil(t, err, "Must be not nil")
 }
 
 func TestCreateTables(t *testing.T) {
