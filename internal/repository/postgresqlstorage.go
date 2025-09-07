@@ -30,8 +30,8 @@ func NewPostgreSQLStorage(ctx context.Context, databaseDSN string) *PostreSQLSto
 	return ps
 }
 
-func (ps *PostreSQLStorage) Close() {
-	ps.db.Close()
+func (ms *PostreSQLStorage) Close() {
+	ms.db.Close()
 }
 
 func (ms *PostreSQLStorage) CreateTables() error {
