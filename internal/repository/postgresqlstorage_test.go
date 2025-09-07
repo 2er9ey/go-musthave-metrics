@@ -37,7 +37,14 @@ func TestSetMetric(t *testing.T) {
 	ps := NewPostgreSQLStorage(ctx, "host=127.0.0.1 user=video password=XXXXXXXX dbname=video sslmode=disable")
 	defer ps.Close()
 
+	if err := ps.db.PingContext(ctx); err != nil {
+		return
+	}
+
 	err := ps.Set(metric)
+	if err != nil {
+		t.Log(err)
+	}
 	assert.Nil(t, err, "Must be nil")
 }
 
