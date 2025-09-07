@@ -15,6 +15,7 @@ func TestCreatePostgreSQLStorage(t *testing.T) {
 	t.Run("CreateCorrectPostgreSQLStorage", func(t *testing.T) {
 		ps := NewPostgreSQLStorage(ctx, "host=127.0.0.1 user=video password=XXXXXXXX dbname=video sslmode=disable")
 		assert.NotNil(t, ps, "PostgreSQL storage is nil")
+		defer ps.Close()
 	})
 
 	t.Run("CreateIncorrectPostgreSQLStorage", func(t *testing.T) {
@@ -25,6 +26,7 @@ func TestCreatePostgreSQLStorage(t *testing.T) {
 	t.Run("CreateIncorrectDSN", func(t *testing.T) {
 		ps := NewPostgreSQLStorage(ctx, "host=10.0.0.1")
 		assert.NotNil(t, ps, "Must be not nil")
+		defer ps.Close()
 	})
 }
 
@@ -33,7 +35,16 @@ func TestSetMetric(t *testing.T) {
 	defer cancel()
 	metric := models.NewMetricCounter("counter", 134)
 	ps := NewPostgreSQLStorage(ctx, "host=127.0.0.1 user=video password=XXXXXXXX dbname=video sslmode=disable")
+	defer ps.Close()
 
 	err := ps.Set(metric)
 	assert.NotNil(t, err, "Must be not nil")
+}
+
+func TestCreateTables(t *testing.T) {
+	ps := NewPostgreSQLStorage(context.Background(), "host=127.0.0.1 user=video password=XXXXXXXX dbname=video sslmode=disable")
+	defer ps.Close()
+
+	err := ps.CreateTables()
+	assert.Nil(t, err, "Must be nil")
 }

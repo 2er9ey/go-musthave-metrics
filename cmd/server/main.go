@@ -32,7 +32,10 @@ func main() {
 	if config.databaseDSN == "" {
 		repo = repository.NewMemoryStorage()
 	} else {
-		repo = repository.NewPostgreSQLStorage(ctx, config.databaseDSN)
+		ps := repository.NewPostgreSQLStorage(ctx, config.databaseDSN)
+		ps.CreateTables()
+		defer ps.Close()
+		repo = ps
 	}
 	service := service.NewMetricService(ctx, repo, config.storeInterval, config.fileStoragePath, config.databaseDSN)
 	if config.restoreMetrics {

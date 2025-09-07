@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 
@@ -27,9 +28,21 @@ func NewPostgreSQLStorage(ctx context.Context, databaseDSN string) *PostreSQLSto
 	ps.db = db
 	ps.databaseDSN = databaseDSN
 	ps.ctx = ctx
-	defer ps.db.Close()
-
 	return ps
+}
+
+func (ps *PostreSQLStorage) Close() {
+	ps.db.Close()
+}
+
+func (ms *PostreSQLStorage) CreateTables() error {
+	result, err := ms.db.ExecContext(ms.ctx, "CREATE TABLE IF NOT EXISTS metrics (id SERIAL PRIMARY KEY, metric_id    VARCHAR(255) NOT NULL, metric_type  VARCHAR(255) NOT NULL, metric_delta bigint, metric_value double precision, metric_hash  VARCHAR(255));")
+	fmt.Println(result)
+	fmt.Println(err)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (ms *PostreSQLStorage) PrintAll() {
