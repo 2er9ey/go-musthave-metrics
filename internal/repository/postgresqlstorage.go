@@ -35,7 +35,7 @@ func (ps *PostreSQLStorage) Close() {
 }
 
 func (ms *PostreSQLStorage) CreateTables() error {
-	_, err := ms.db.ExecContext(ms.ctx, "CREATE TABLE IF NOT EXISTS metrics (id SERIAL PRIMARY KEY, metric_id    VARCHAR(255) NOT NULL, metric_type  VARCHAR(255) NOT NULL, metric_delta bigint, metric_value double precision, metric_hash  VARCHAR(255));")
+	_, err := ms.db.ExecContext(ms.ctx, "CREATE TABLE IF NOT EXISTS metrics (id SERIAL PRIMARY KEY, metric_id VARCHAR(255) NOT NULL, metric_type  VARCHAR(255) NOT NULL, metric_delta bigint, metric_value double precision, metric_hash  VARCHAR(255));")
 	if err != nil {
 		return err
 	}
@@ -46,8 +46,7 @@ func (ms *PostreSQLStorage) PrintAll() {
 }
 
 func (ms *PostreSQLStorage) Set(m models.Metrics) error {
-	_, err := ms.db.ExecContext(ms.ctx, "insert into metrics (metric_id, metric_type, metric_delta, metric_value, metric_hash) values (?,?,?,?,?)",
-		m.ID, m.MType, m.Delta, m.Value, m.Hash)
+	_, err := ms.db.ExecContext(ms.ctx, "INSERT INTO metrics (metric_id, metric_type, metric_delta, metric_value, metric_hash) values ( $1 , $2, $3, $4, $5 );", m.ID, m.MType, m.Delta, m.Value, m.Hash)
 	if err != nil {
 		return err
 	}
