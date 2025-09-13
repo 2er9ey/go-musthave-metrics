@@ -71,7 +71,7 @@ func (ms *PostreSQLStorage) SetMetric(m models.Metrics) error {
 			fmt.Printf("Непредвиденная ошибка: %v\n", err)
 			return err
 		}
-		time.Sleep(time.Duration(3) * time.Second)
+		time.Sleep(time.Duration(1+(attempt*2)) * time.Second)
 	}
 	return nil
 }
@@ -109,7 +109,7 @@ func (ms *PostreSQLStorage) GetMetric(metricKey string, metricType string) (mode
 		if classification == pgerrors.NonRetriable || attempt == 3 {
 			return models.Metrics{}, row.Err()
 		}
-		time.Sleep(time.Duration(3) * time.Second)
+		time.Sleep(time.Duration(1+(attempt*2)) * time.Second)
 	}
 
 	return metric, nil
