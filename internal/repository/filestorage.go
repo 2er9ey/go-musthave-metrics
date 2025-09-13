@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"strings"
 	"sync"
@@ -24,21 +25,27 @@ func NewFileStorage(fileName string, storeInterval int, restoreMetric bool) *Fil
 		return nil
 	}
 	ms := NewMemoryStorage()
-	fs := FileStorage{
+	if ms == nil {
+		return nil
+	}
+
+	fs := &FileStorage{
 		ms:            ms,
 		fileName:      fileName,
 		storeInterval: storeInterval,
 	}
+
 	if restoreMetric {
-		err := fs.LoadMetrics(fileName)
-		if err != nil {
-			return nil
-		}
+		fs.LoadMetrics(fileName)
+		// if err != nil {
+		// 	fmt.Println("xxx -> ", err)
+		// 	return nil
+		// }
 	}
 	if storeInterval > 0 {
 		fs.RunSaver()
 	}
-	return &fs
+	return fs
 }
 
 func (fs *FileStorage) SetMetric(m models.Metrics) error {
@@ -64,21 +71,34 @@ func (fs *FileStorage) SetMetrics(metrics []models.Metrics) error {
 }
 
 func (fs *FileStorage) GetMetric(metricKey string, metricType string) (models.Metrics, error) {
+	if fs == nil {
+		fmt.Println("!!!!!!!!!!!!!!!")
+		os.Exit(10)
+	}
+	if fs.ms == nil {
+		return models.Metrics{}, nil
+	}
 	return fs.ms.GetMetric(metricKey, metricType)
 }
 
 func (fs *FileStorage) GetMetricString(metricKey string, metricType string) (string, error) {
+	if fs.ms == nil {
+		return "", nil
+	}
 	return fs.ms.GetMetricString(metricKey, metricType)
 }
 
 func (fs *FileStorage) GetAllMetric() []models.Metrics {
+	if fs.ms == nil {
+		return make([]models.Metrics, 0)
+	}
 	return fs.ms.GetAllMetric()
 }
 
 func (fs *FileStorage) LoadMetrics(filename string) error {
 	file, err := os.OpenFile(filename, os.O_RDONLY, 0666)
 	if err != nil {
-		return errors.New("can't open file")
+		return errors.New("can't open file " + filename)
 	}
 
 	buf := bufio.NewReader(file)

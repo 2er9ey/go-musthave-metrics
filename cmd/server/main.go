@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"reflect"
 
 	"github.com/2er9ey/go-musthave-metrics/internal/handler"
 	"github.com/2er9ey/go-musthave-metrics/internal/logger"
@@ -28,7 +29,10 @@ func main() {
 	}
 	defer logger.Log.Sync()
 
-	logger.Log.Info("Config: ", zap.String("databaseDSN", config.databaseDSN))
+	logger.Log.Info("Config: ", zap.String("databaseDSN", config.databaseDSN),
+		zap.Int("StoreInterval", config.storeInterval),
+		zap.String("FileStoragePath", config.fileStoragePath),
+		zap.Bool("RestoreMetrics", config.restoreMetrics))
 
 	var repo repository.MetricsRepositoryInterface
 	if config.databaseDSN == "" {
@@ -45,7 +49,8 @@ func main() {
 		}
 		repo = ps
 	}
-	if repo == nil {
+	v := reflect.ValueOf(repo)
+	if v.Kind() == reflect.Ptr && v.IsNil() {
 		logger.Log.Error("Ошибка создания репозитория метрик")
 		os.Exit(1)
 	}
