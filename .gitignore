@@ -21,7 +21,7 @@ cmd/server/server
 vendor/
 
 #autotests
-.toosl/
+.tools/
 
 # IDEs directories
 .idea
