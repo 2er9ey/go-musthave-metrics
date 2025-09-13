@@ -9,4 +9,4 @@ CREATE TABLE metrics (
 );
 
 -- Базовый индекс для поиска по названию
-CREATE INDEX idx_metrics_type_id ON metrics(metric_type, metric_id);
+CREATE UNIQUE INDEX idx_metrics_type_id ON metrics(metric_type, metric_id);

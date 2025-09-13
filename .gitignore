@@ -22,6 +22,7 @@ vendor/
 
 #autotests
 .tools/
+metricstest
 
 # IDEs directories
 .idea

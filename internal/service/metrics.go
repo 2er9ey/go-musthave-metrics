@@ -7,7 +7,9 @@ import (
 	"strconv"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"go.uber.org/zap"
 
+	"github.com/2er9ey/go-musthave-metrics/internal/logger"
 	"github.com/2er9ey/go-musthave-metrics/internal/models"
 	"github.com/2er9ey/go-musthave-metrics/internal/repository"
 )
@@ -70,6 +72,7 @@ func (ms *MetricService) Get(mID string, mType string) (string, error) {
 }
 
 func (ms *MetricService) GetMetric(mID string, mType string) (models.Metrics, error) {
+	logger.Log.Debug("Service: GetMetric", zap.String("mID", mID), zap.String("mType", mType))
 	return ms.repo.GetMetric(mID, mType)
 }
 

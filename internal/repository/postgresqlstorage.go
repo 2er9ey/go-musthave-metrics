@@ -3,10 +3,13 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"go.uber.org/zap"
 
+	"github.com/2er9ey/go-musthave-metrics/internal/logger"
 	"github.com/2er9ey/go-musthave-metrics/internal/models"
 )
 
@@ -47,7 +50,22 @@ func (ms *PostreSQLStorage) PrintAll() {
 }
 
 func (ms *PostreSQLStorage) SetMetric(m models.Metrics) error {
-	_, err := ms.db.ExecContext(ms.ctx, "INSERT INTO metrics (metric_id, metric_type, metric_delta, metric_value, metric_hash) values ( $1 , $2, $3, $4, $5 );", m.ID, m.MType, m.Delta, m.Value, m.Hash)
+	logger.Log.Debug("PSQL: insert " + m.String())
+	sql := "INSERT INTO metrics (metric_id, metric_type, metric_delta, metric_value, metric_hash) values ( $1 , $2, $3, $4, $5 ) on conflict (metric_id, metric_type) do update set "
+	switch m.MType {
+	case models.Gauge:
+		sql = sql + "metric_value = EXCLUDED.metric_value"
+	case models.Counter:
+		sql = sql + "metric_delta = metrics.metric_delta + EXCLUDED.metric_delta"
+	default:
+		return errors.New("invalid metric type")
+	}
+
+	sql = sql + ";"
+
+	logger.Log.Debug("SQL:", zap.String("sql", sql))
+
+	_, err := ms.db.ExecContext(ms.ctx, sql, m.ID, m.MType, m.Delta, m.Value, m.Hash)
 	if err != nil {
 		return err
 	}
@@ -70,6 +88,7 @@ func (ms *PostreSQLStorage) SetMetrics(metrics []models.Metrics) error {
 }
 
 func (ms *PostreSQLStorage) GetMetric(metricKey string, metricType string) (models.Metrics, error) {
+	logger.Log.Debug("PSQL: select " + metricKey + "/" + metricType)
 	row := ms.db.QueryRowContext(ms.ctx, "SELECT metric_id, metric_type, metric_delta, metric_value, metric_hash from metrics where metric_id = $1 and metric_type = $2", metricKey, metricType)
 	if row.Err() != nil {
 		return models.Metrics{}, row.Err()
