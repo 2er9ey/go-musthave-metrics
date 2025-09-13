@@ -8,8 +8,8 @@ type MetricServiceInterface interface {
 	Get(string, string) (string, error)
 	GetMetric(string, string) (models.Metrics, error)
 	GetAll() []models.Metrics
+	Ping() (bool, error)
 	// LoadMetrics(string) error
 	// SaveMetrics(string) error
-	// DBChekConnection() (bool, error)
 	// RunSaver()
 }

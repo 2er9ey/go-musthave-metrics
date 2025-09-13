@@ -195,12 +195,12 @@ func (mh *MetricHandler) GetAll(c *gin.Context) {
 	c.String(http.StatusOK, body)
 }
 
-func (mh *MetricHandler) DBChekConnection(c *gin.Context) {
-	// res, err := mh.service.DBChekConnection()
+func (mh *MetricHandler) Ping(c *gin.Context) {
+	res, err := mh.service.Ping()
 	// fmt.Println("Check result = ", res, err)
-	// if !res {
-	// 	c.String(http.StatusInternalServerError, err.Error())
-	// 	return
-	// }
-	// c.String(http.StatusOK, "OK")
+	if !res {
+		c.String(http.StatusInternalServerError, err.Error())
+		return
+	}
+	c.String(http.StatusOK, "OK")
 }

@@ -4,9 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"strconv"
-	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 
@@ -79,18 +77,10 @@ func (ms *MetricService) GetAll() []models.Metrics {
 	return ms.repo.GetAllMetric()
 }
 
-func (ms *MetricService) DBChekConnection() (bool, error) {
-	ctx, cancel := context.WithTimeout(ms.ctx, 1*time.Second)
-	defer cancel()
-
-	fmt.Println("DBString = ", ms.databaseDSN)
-
-	if err := ms.db.PingContext(ctx); err != nil {
-		return false, err
-	}
-	return true, nil
-}
-
 func (ms *MetricService) SetBunch(metrics []models.Metrics) error {
 	return ms.repo.SetMetrics(metrics)
+}
+
+func (ms *MetricService) Ping() (bool, error) {
+	return ms.repo.Ping()
 }

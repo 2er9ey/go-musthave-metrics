@@ -165,3 +165,7 @@ func (fs *FileStorage) RunSaver() {
 		//			logger.Log.Debug("Saving metrics")
 	}()
 }
+
+func (fs *FileStorage) Ping() (bool, error) {
+	return true, nil
+}

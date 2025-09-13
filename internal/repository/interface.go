@@ -8,4 +8,5 @@ type MetricsRepositoryInterface interface {
 	GetMetricString(string, string) (string, error)
 	GetMetric(string, string) (models.Metrics, error)
 	GetAllMetric() []models.Metrics
+	Ping() (bool, error)
 }

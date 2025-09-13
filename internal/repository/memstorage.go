@@ -91,3 +91,7 @@ func (ms *MemoryStorage) GetAllMetric() []models.Metrics {
 	counters := slices.Collect(maps.Values(ms.metricsCounter))
 	return append(gauges, counters...)
 }
+
+func (ms *MemoryStorage) Ping() (bool, error) {
+	return true, nil
+}

@@ -23,7 +23,7 @@ func SetupRouter(metricsHandler handler.MetricHandler) *gin.Engine {
 	})
 
 	router.GET("/ping", func(c *gin.Context) {
-		metricsHandler.DBChekConnection(c)
+		metricsHandler.Ping(c)
 	})
 
 	valueGroup := router.Group("/value")

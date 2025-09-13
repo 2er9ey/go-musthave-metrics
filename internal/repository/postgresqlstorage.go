@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 
@@ -108,4 +109,14 @@ func (ms *PostreSQLStorage) GetAllMetric() []models.Metrics {
 	}
 
 	return metrics
+}
+
+func (ms *PostreSQLStorage) Ping() (bool, error) {
+	ctx, cancel := context.WithTimeout(ms.ctx, 1*time.Second)
+	defer cancel()
+
+	if err := ms.db.PingContext(ctx); err != nil {
+		return false, err
+	}
+	return true, nil
 }
