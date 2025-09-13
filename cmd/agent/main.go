@@ -32,7 +32,7 @@ func main() {
 	var wg sync.WaitGroup
 	go getMetrics(repo, cm)
 	time.Sleep(config.reportInterval)
-	sendMetricsCompressed(repo)
+	sendBunchMetricsCompressed(repo)
 	wg.Wait()
 	// fmt.Println("All workers are done!")
 }
@@ -93,6 +93,32 @@ func sendMetricsCompressed(repo repository.MetricsRepositoryInterface) {
 			}
 			resp.Body.Close()
 		}
+		//		fmt.Println("Метрики отправлены")
+		time.Sleep(config.reportInterval)
+	}
+}
+
+func sendBunchMetricsCompressed(repo repository.MetricsRepositoryInterface) {
+	for {
+		mutex.Lock()
+		metrics := repo.GetAllMetric()
+		mutex.Unlock()
+		jsonValue, _ := json.Marshal(metrics)
+		buf := bytes.NewBuffer(nil)
+		zb := gzip.NewWriter(buf)
+		zb.Write(jsonValue)
+		zb.Close()
+		request, err := http.NewRequest("POST", "http://"+config.serverEndpoint+"/updates", buf)
+		if err != nil {
+			break
+		}
+		request.Header.Set("Content-Encoding", "gzip")
+		request.Header.Set("Content-type", "application/json")
+		resp, err2 := http.DefaultClient.Do(request)
+		if err2 != nil {
+			break
+		}
+		resp.Body.Close()
 		//		fmt.Println("Метрики отправлены")
 		time.Sleep(config.reportInterval)
 	}
