@@ -21,28 +21,28 @@ func NewMetricHandler(service service.MetricServiceInterface) *MetricHandler {
 	return &MetricHandler{service: service}
 }
 
-type MetricRequest struct {
-	ID    string `json:"id"`
-	MType string `json:"type"`
-	Value string `json:"value,omitempty"`
-}
+// type MetricRequest struct {
+// 	ID    string `json:"id"`
+// 	MType string `json:"type"`
+// 	Value string `json:"value,omitempty"`
+// }
 
-type MetricRequestBunch []MetricRequest
+type MetricRequestBunch []models.Metrics
 
 // UnmarshalJSON implements the json.Unmarshaler interface for Items.
 func (i *MetricRequestBunch) UnmarshalJSON(data []byte) error {
-	//	fmt.Println("Req = ", string(data))
+	logger.Log.Debug("JSONRequest = ", zap.String("data", string(data)))
 	// Try to unmarshal as an array first.
-	var arr []MetricRequest
+	var arr []models.Metrics
 	if err := json.Unmarshal(data, &arr); err == nil {
 		*i = arr
 		return nil
 	}
 
 	// If it's not an array, try to unmarshal as a single object.
-	var single MetricRequest
+	var single models.Metrics
 	if err := json.Unmarshal(data, &single); err == nil {
-		*i = []MetricRequest{single} // Convert single item to a slice.
+		*i = []models.Metrics{single} // Convert single item to a slice.
 		return nil
 	}
 
@@ -90,16 +90,23 @@ func (mh *MetricHandler) PostUpdateJSON(c *gin.Context) {
 		return
 	}
 
-	// var metrics models.Metrics
-	for _, item := range req {
-		err := mh.service.Set(item.ID, item.MType, item.Value)
-		if err != nil {
-			logger.Log.Debug("cannot set of metric", zap.Error(err))
-			c.String(http.StatusBadRequest, "Неверное значение метрики")
-			return
-		}
-		// 	// metrics = append(metrics, metric)
+	err := mh.service.SetBunch(req)
+	if err != nil {
+		logger.Log.Debug("cannot set of metric", zap.Error(err))
+		c.String(http.StatusBadRequest, "Неверное значение метрики")
+		return
 	}
+
+	// var metrics models.Metrics
+	// for _, item := range req {
+	// 	err := mh.service.Set(item.ID, item.MType, item.Value)
+	// 	if err != nil {
+	// 		logger.Log.Debug("cannot set of metric", zap.Error(err))
+	// 		c.String(http.StatusBadRequest, "Неверное значение метрики")
+	// 		return
+	// 	}
+	// 	// 	// metrics = append(metrics, metric)
+	// }
 
 	// err := mh.service.SetBunch(metrics)
 	// if err != nil {

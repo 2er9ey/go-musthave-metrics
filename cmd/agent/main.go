@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/2er9ey/go-musthave-metrics/internal/agent"
-	"github.com/2er9ey/go-musthave-metrics/internal/handler"
 	"github.com/2er9ey/go-musthave-metrics/internal/repository"
 )
 
@@ -54,8 +53,8 @@ func sendMetrics(repo repository.MetricsRepositoryInterface) {
 		metrics := repo.GetAllMetric()
 		mutex.Unlock()
 		for _, value := range metrics {
-			metricValue := handler.MetricRequest{ID: value.ID, MType: value.MType, Value: value.String()}
-			jsonValue, _ := json.Marshal(metricValue)
+			//			metricValue := handler.MetricRequest{ID: value.ID, MType: value.MType, Value: value.String()}
+			jsonValue, _ := json.Marshal(value)
 			fmt.Println(">", jsonValue)
 			response, err := http.Post("http://"+config.serverEndpoint+"/update", "application/json", bytes.NewBuffer(jsonValue))
 			if err != nil {
@@ -75,8 +74,8 @@ func sendMetricsCompressed(repo repository.MetricsRepositoryInterface) {
 		metrics := repo.GetAllMetric()
 		mutex.Unlock()
 		for _, value := range metrics {
-			metricValue := handler.MetricRequest{ID: value.ID, MType: value.MType, Value: value.String()}
-			jsonValue, _ := json.Marshal(metricValue)
+			//			metricValue := handler.MetricRequest{ID: value.ID, MType: value.MType, Value: value.String()}
+			jsonValue, _ := json.Marshal(value)
 			//fmt.Println(">", string(jsonValue))
 			buf := bytes.NewBuffer(nil)
 			zb := gzip.NewWriter(buf)

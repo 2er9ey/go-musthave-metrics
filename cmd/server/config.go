@@ -27,7 +27,7 @@ func parseConfig() (Config, error) {
 	var conf Config
 
 	flag.StringVar(&conf.listenEndpoint, "a", "localhost:8080", "Адрес и порт для работы севрера")
-	flag.StringVar(&conf.logLevel, "l", "info", "Уровень журналирования")
+	flag.StringVar(&conf.logLevel, "l", "debug", "Уровень журналирования")
 	flag.IntVar(&conf.storeInterval, "i", 300, "Интервал сохранения значений метрик")
 	flag.StringVar(&conf.fileStoragePath, "f", "metrics.dat", "Имя файла для сохранения значения метрик")
 	//	flag.StringVar(&conf.databaseDSN, "d", "host=127.0.0.1 user=video password=XXXXXXXX dbname=video sslmode=disable", "Строка подключения к базе данных")
