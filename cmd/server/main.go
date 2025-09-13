@@ -44,7 +44,6 @@ func main() {
 	} else {
 		ps := repository.NewPostgreSQLStorage(ctx, config.databaseDSN)
 		if ps != nil {
-			ps.CreateTables()
 			defer ps.Close()
 		}
 		repo = ps

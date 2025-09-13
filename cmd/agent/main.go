@@ -5,7 +5,9 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 
@@ -108,17 +110,40 @@ func sendBunchMetricsCompressed(repo repository.MetricsRepositoryInterface) {
 		zb := gzip.NewWriter(buf)
 		zb.Write(jsonValue)
 		zb.Close()
-		request, err := http.NewRequest("POST", "http://"+config.serverEndpoint+"/updates", buf)
-		if err != nil {
-			break
+		retryTimeout := 1
+		for retry := 0; retry < 4; retry++ {
+			fmt.Println("Try ", retry)
+			request, err := http.NewRequest("POST", "http://"+config.serverEndpoint+"/updates", buf)
+			if err != nil {
+				break
+			}
+			request.Header.Set("Content-Encoding", "gzip")
+			request.Header.Set("Content-type", "application/json")
+			resp, err2 := http.DefaultClient.Do(request)
+			if err2 != nil {
+				switch err2 := err2.(type) {
+				case *url.Error:
+					if err2.Timeout() {
+						fmt.Printf("timeout: %s", err2.Err)
+					} else if err2, ok := err2.Err.(*net.OpError); ok {
+						fmt.Printf("net error: %s\n", err2)
+					} else {
+						fmt.Printf("original error: %T\n", err2)
+					}
+				default:
+					fmt.Printf("unknown error: %v\n", err2)
+				}
+			} else {
+				resp.Body.Close()
+				break
+			}
+			if retry < 3 {
+				fmt.Printf("Sleeping %d seconds\n", retryTimeout)
+				time.Sleep(time.Duration(retryTimeout) * time.Second)
+				fmt.Println("Wakeup")
+				retryTimeout = retryTimeout + 2
+			}
 		}
-		request.Header.Set("Content-Encoding", "gzip")
-		request.Header.Set("Content-type", "application/json")
-		resp, err2 := http.DefaultClient.Do(request)
-		if err2 != nil {
-			break
-		}
-		resp.Body.Close()
 		//		fmt.Println("Метрики отправлены")
 		time.Sleep(config.reportInterval)
 	}

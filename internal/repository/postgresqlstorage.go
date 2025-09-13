@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/2er9ey/go-musthave-metrics/internal/logger"
 	"github.com/2er9ey/go-musthave-metrics/internal/models"
+	"github.com/2er9ey/go-musthave-metrics/internal/pgerrors"
 )
 
 type PostreSQLStorage struct {
@@ -38,14 +40,6 @@ func (ms *PostreSQLStorage) Close() {
 	ms.db.Close()
 }
 
-func (ms *PostreSQLStorage) CreateTables() error {
-	_, err := ms.db.ExecContext(ms.ctx, "CREATE TABLE IF NOT EXISTS metrics (id SERIAL PRIMARY KEY, metric_id VARCHAR(255) NOT NULL, metric_type  VARCHAR(255) NOT NULL, metric_delta bigint, metric_value double precision, metric_hash  VARCHAR(255));")
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func (ms *PostreSQLStorage) PrintAll() {
 }
 
@@ -64,15 +58,26 @@ func (ms *PostreSQLStorage) SetMetric(m models.Metrics) error {
 	sql = sql + ";"
 
 	logger.Log.Debug("SQL:", zap.String("sql", sql))
+	classifier := pgerrors.NewPostgresErrorClassifier()
+	for attempt := 0; attempt < 4; attempt++ {
+		_, err := ms.db.ExecContext(ms.ctx, sql, m.ID, m.MType, m.Delta, m.Value, m.Hash)
+		if err == nil {
+			break
+		}
 
-	_, err := ms.db.ExecContext(ms.ctx, sql, m.ID, m.MType, m.Delta, m.Value, m.Hash)
-	if err != nil {
-		return err
+		classification := classifier.Classify(err)
+		if classification == pgerrors.NonRetriable {
+			// Нет смысла повторять, возвращаем ошибку
+			fmt.Printf("Непредвиденная ошибка: %v\n", err)
+			return err
+		}
+		time.Sleep(time.Duration(3) * time.Second)
 	}
 	return nil
 }
 
 func (ms *PostreSQLStorage) SetMetrics(metrics []models.Metrics) error {
+	logger.Log.Debug("PSQL: SetMetrics")
 	tx, err := ms.db.Begin()
 	if err != nil {
 		return err
@@ -89,14 +94,22 @@ func (ms *PostreSQLStorage) SetMetrics(metrics []models.Metrics) error {
 
 func (ms *PostreSQLStorage) GetMetric(metricKey string, metricType string) (models.Metrics, error) {
 	logger.Log.Debug("PSQL: select " + metricKey + "/" + metricType)
-	row := ms.db.QueryRowContext(ms.ctx, "SELECT metric_id, metric_type, metric_delta, metric_value, metric_hash from metrics where metric_id = $1 and metric_type = $2", metricKey, metricType)
-	if row.Err() != nil {
-		return models.Metrics{}, row.Err()
-	}
+	classifier := pgerrors.NewPostgresErrorClassifier()
 	var metric models.Metrics
-	err := row.Scan(&metric.ID, &metric.MType, &metric.Delta, &metric.Value, &metric.Hash)
-	if err != nil {
-		return models.Metrics{}, err
+	for attempt := 0; attempt < 4; attempt++ {
+		row := ms.db.QueryRowContext(ms.ctx, "SELECT metric_id, metric_type, metric_delta, metric_value, metric_hash from metrics where metric_id = $1 and metric_type = $2", metricKey, metricType)
+		if row.Err() == nil {
+			err := row.Scan(&metric.ID, &metric.MType, &metric.Delta, &metric.Value, &metric.Hash)
+			if err != nil {
+				return models.Metrics{}, err
+			}
+			break
+		}
+		classification := classifier.Classify(row.Err())
+		if classification == pgerrors.NonRetriable || attempt == 3 {
+			return models.Metrics{}, row.Err()
+		}
+		time.Sleep(time.Duration(3) * time.Second)
 	}
 
 	return metric, nil
