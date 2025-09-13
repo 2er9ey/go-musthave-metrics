@@ -272,6 +272,9 @@ jobs:
           SERVER_PORT=$(random unused-port)
           ADDRESS="localhost:${SERVER_PORT}"
           TEMP_FILE=$(random tempfile)
+          go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+          go get -u github.com/golang-migrate/migrate/v4
+          migrate -database 'postgres://postgres:postgres@postgres:5432/praktikum?sslmode=disable' -path ./migrations up
           metricstest -test.v -test.run=^TestIteration10[AB]$ \
             -agent-binary-path=cmd/agent/agent \
             -binary-path=cmd/server/server \
@@ -307,9 +310,6 @@ jobs:
           SERVER_PORT=$(random unused-port)
           ADDRESS="localhost:${SERVER_PORT}"
           TEMP_FILE=$(random tempfile)
-          go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
-          go get -u github.com/golang-migrate/migrate/v4
-          migrate -database 'postgres://postgres:postgres@postgres:5432/praktikum?sslmode=disable' -path ./migrations up
           metricstest -test.v -test.run=^TestIteration12$ \
             -agent-binary-path=cmd/agent/agent \
             -binary-path=cmd/server/server \
