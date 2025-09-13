@@ -1,0 +1,147 @@
+package repository
+
+import (
+	"bufio"
+	"encoding/json"
+	"errors"
+	"os"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/2er9ey/go-musthave-metrics/internal/models"
+)
+
+type FileStorage struct {
+	mutex         sync.Mutex
+	ms            *MemoryStorage
+	fileName      string
+	storeInterval int
+}
+
+func NewFileStorage(fileName string, storeInterval int, restoreMetric bool) *FileStorage {
+	if fileName == "" {
+		return nil
+	}
+	ms := NewMemoryStorage()
+	fs := FileStorage{
+		ms:            ms,
+		fileName:      fileName,
+		storeInterval: storeInterval,
+	}
+	if restoreMetric {
+		err := fs.LoadMetrics(fileName)
+		if err != nil {
+			return nil
+		}
+	}
+	if storeInterval > 0 {
+		fs.RunSaver()
+	}
+	return &fs
+}
+
+func (fs *FileStorage) SetMetric(m models.Metrics) error {
+	err := fs.ms.SetMetric(m)
+	if err != nil {
+		return err
+	}
+	if fs.storeInterval == 0 {
+		fs.SaveMetrics()
+	}
+	return nil
+}
+
+func (fs *FileStorage) SetMetrics(metrics []models.Metrics) error {
+	err := fs.ms.SetMetrics(metrics)
+	if err != nil {
+		return err
+	}
+	if fs.storeInterval == 0 {
+		fs.SaveMetrics()
+	}
+	return nil
+}
+
+func (fs *FileStorage) GetMetric(metricKey string, metricType string) (models.Metrics, error) {
+	return fs.ms.GetMetric(metricKey, metricType)
+}
+
+func (fs *FileStorage) GetMetricString(metricKey string, metricType string) (string, error) {
+	return fs.ms.GetMetricString(metricKey, metricType)
+}
+
+func (fs *FileStorage) GetAllMetric() []models.Metrics {
+	return fs.ms.GetAllMetric()
+}
+
+func (fs *FileStorage) LoadMetrics(filename string) error {
+	file, err := os.OpenFile(filename, os.O_RDONLY, 0666)
+	if err != nil {
+		return errors.New("can't open file")
+	}
+
+	buf := bufio.NewReader(file)
+	line, err := buf.ReadBytes('\n')
+	if err != nil {
+		return err
+	}
+
+	if string(line) != "[\n" {
+		return errors.New("wrong file")
+	}
+
+	var metrics []models.Metrics
+
+	for {
+		var metric models.Metrics
+		line, err = buf.ReadBytes('\n')
+		if err != nil {
+			return err
+		}
+		stringLine := strings.TrimRight(strings.TrimSpace(string(line)), ",")
+		if stringLine == "]" {
+			break
+		}
+		json.Unmarshal([]byte(stringLine), &metric)
+		metrics = append(metrics, metric)
+	}
+	return fs.ms.SetMetrics(metrics)
+}
+
+func (fs *FileStorage) SaveMetrics() error {
+	fs.mutex.Lock()
+	defer fs.mutex.Unlock()
+
+	file, err := os.OpenFile(fs.fileName, os.O_WRONLY|os.O_CREATE, 0666)
+	if err != nil {
+		return err
+	}
+
+	metrics := fs.ms.GetAllMetric()
+
+	file.WriteString("[\n")
+	for _, value := range metrics {
+		jsonString, _ := json.Marshal(value)
+		file.WriteString("  ")
+		file.Write(jsonString)
+		file.WriteString(",\n")
+	}
+	file.WriteString("]\n")
+
+	file.Close()
+	return nil
+}
+
+func (fs *FileStorage) RunSaver() {
+	if fs.storeInterval <= 0 {
+		return
+	}
+	go func() {
+		for {
+			time.Sleep(time.Duration(fs.storeInterval) * time.Second)
+			fs.SaveMetrics()
+		}
+		//			logger.Log.Debug("Saving metrics")
+	}()
+}

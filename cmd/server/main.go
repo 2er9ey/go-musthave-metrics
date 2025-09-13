@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/2er9ey/go-musthave-metrics/internal/handler"
 	"github.com/2er9ey/go-musthave-metrics/internal/logger"
@@ -25,25 +26,30 @@ func main() {
 		fmt.Println("Ошибка журнала", err)
 		return
 	}
+	defer logger.Log.Sync()
 
 	logger.Log.Info("Config: ", zap.String("databaseDSN", config.databaseDSN))
 
 	var repo repository.MetricsRepositoryInterface
 	if config.databaseDSN == "" {
-		repo = repository.NewMemoryStorage()
+		if config.fileStoragePath == "" {
+			repo = repository.NewMemoryStorage()
+		} else {
+			repo = repository.NewFileStorage(config.fileStoragePath, config.storeInterval, config.restoreMetrics)
+		}
 	} else {
 		ps := repository.NewPostgreSQLStorage(ctx, config.databaseDSN)
-		ps.CreateTables()
-		defer ps.Close()
+		if ps != nil {
+			ps.CreateTables()
+			defer ps.Close()
+		}
 		repo = ps
 	}
+	if repo == nil {
+		logger.Log.Error("Ошибка создания репозитория метрик")
+		os.Exit(1)
+	}
 	service := service.NewMetricService(ctx, repo, config.storeInterval, config.fileStoragePath, config.databaseDSN)
-	if config.restoreMetrics {
-		service.LoadMetrics(config.fileStoragePath)
-	}
-	if config.databaseDSN == "" && config.storeInterval > 0 {
-		service.RunSaver()
-	}
 	metricsHandler := handler.NewMetricHandler(service)
 
 	router := SetupRouter(*metricsHandler)

@@ -41,7 +41,7 @@ func TestSetMetric(t *testing.T) {
 		return
 	}
 
-	err := ps.Set(metric)
+	err := ps.SetMetric(metric)
 	if err != nil {
 		t.Log(err)
 	}

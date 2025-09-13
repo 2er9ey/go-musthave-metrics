@@ -31,6 +31,7 @@ type MetricRequestBunch []MetricRequest
 
 // UnmarshalJSON implements the json.Unmarshaler interface for Items.
 func (i *MetricRequestBunch) UnmarshalJSON(data []byte) error {
+	//	fmt.Println("Req = ", string(data))
 	// Try to unmarshal as an array first.
 	var arr []MetricRequest
 	if err := json.Unmarshal(data, &arr); err == nil {
@@ -188,11 +189,11 @@ func (mh *MetricHandler) GetAll(c *gin.Context) {
 }
 
 func (mh *MetricHandler) DBChekConnection(c *gin.Context) {
-	res, err := mh.service.DBChekConnection()
-	fmt.Println("Check result = ", res, err)
-	if !res {
-		c.String(http.StatusInternalServerError, err.Error())
-		return
-	}
-	c.String(http.StatusOK, "OK")
+	// res, err := mh.service.DBChekConnection()
+	// fmt.Println("Check result = ", res, err)
+	// if !res {
+	// 	c.String(http.StatusInternalServerError, err.Error())
+	// 	return
+	// }
+	// c.String(http.StatusOK, "OK")
 }

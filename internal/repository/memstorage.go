@@ -1,14 +1,10 @@
 package repository
 
 import (
-	"bufio"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"maps"
-	"os"
 	"slices"
-	"strings"
 
 	"github.com/2er9ey/go-musthave-metrics/internal/models"
 )
@@ -36,7 +32,7 @@ func (ms *MemoryStorage) PrintAll() {
 	}
 }
 
-func (ms *MemoryStorage) Set(m models.Metrics) error {
+func (ms *MemoryStorage) SetMetric(m models.Metrics) error {
 	switch m.MType {
 	case models.Gauge:
 		ms.metricsGauge[m.ID] = m
@@ -53,9 +49,9 @@ func (ms *MemoryStorage) Set(m models.Metrics) error {
 	return nil
 }
 
-func (ms *MemoryStorage) SetBunch(metrics []models.Metrics) error {
+func (ms *MemoryStorage) SetMetrics(metrics []models.Metrics) error {
 	for _, m := range metrics {
-		err := ms.Set(m)
+		err := ms.SetMetric(m)
 		if err != nil {
 			return err
 		}
@@ -82,19 +78,10 @@ func (ms *MemoryStorage) GetMetric(metricKey string, metricType string) (models.
 	return metric, nil
 }
 
-func (ms *MemoryStorage) GetString(metricKey string, metricType string) (string, error) {
-	var metric models.Metrics
-	var exists bool
-	switch metricType {
-	case models.Gauge:
-		metric, exists = ms.metricsGauge[metricKey]
-	case models.Counter:
-		metric, exists = ms.metricsCounter[metricKey]
-	default:
+func (ms *MemoryStorage) GetMetricString(metricKey string, metricType string) (string, error) {
+	metric, err := ms.GetMetric(metricKey, metricType)
+	if err != nil {
 		return "", errors.New("invalid metric type")
-	}
-	if !exists {
-		return "", errors.New("metric does not exists")
 	}
 	return metric.String(), nil
 }
@@ -103,63 +90,4 @@ func (ms *MemoryStorage) GetAllMetric() []models.Metrics {
 	gauges := slices.Collect(maps.Values(ms.metricsGauge))
 	counters := slices.Collect(maps.Values(ms.metricsCounter))
 	return append(gauges, counters...)
-}
-
-func (ms *MemoryStorage) LoadMetrics(filename string) error {
-	file, err := os.OpenFile(filename, os.O_RDONLY, 0666)
-	if err != nil {
-		return errors.New("can't open file")
-	}
-
-	buf := bufio.NewReader(file)
-	line, err := buf.ReadBytes('\n')
-	if err != nil {
-		return err
-	}
-
-	if string(line) != "[\n" {
-		return errors.New("wrong file")
-	}
-
-	var metrics []models.Metrics
-
-	for {
-		var metric models.Metrics
-		line, err = buf.ReadBytes('\n')
-		if err != nil {
-			return err
-		}
-		stringLine := strings.TrimRight(strings.TrimSpace(string(line)), ",")
-		if stringLine == "]" {
-			break
-		}
-		json.Unmarshal([]byte(stringLine), &metric)
-		metrics = append(metrics, metric)
-	}
-	return ms.SetBunch(metrics)
-}
-
-func (ms *MemoryStorage) SaveMetrics(filename string) error {
-	file, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE, 0666)
-	if err != nil {
-		return err
-	}
-
-	file.WriteString("[\n")
-
-	for _, value := range ms.metricsCounter {
-		jsonString, _ := json.Marshal(value)
-		file.WriteString("  ")
-		file.Write(jsonString)
-		file.WriteString(",\n")
-	}
-	for _, value := range ms.metricsGauge {
-		jsonString, _ := json.Marshal(value)
-		file.WriteString("  ")
-		file.Write(jsonString)
-		file.WriteString(",\n")
-	}
-	file.WriteString("]\n")
-	file.Close()
-	return nil
 }

@@ -1,13 +1,8 @@
 package repository
 
 import (
-	"bufio"
 	"context"
 	"database/sql"
-	"encoding/json"
-	"errors"
-	"os"
-	"strings"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 
@@ -50,7 +45,7 @@ func (ms *PostreSQLStorage) CreateTables() error {
 func (ms *PostreSQLStorage) PrintAll() {
 }
 
-func (ms *PostreSQLStorage) Set(m models.Metrics) error {
+func (ms *PostreSQLStorage) SetMetric(m models.Metrics) error {
 	_, err := ms.db.ExecContext(ms.ctx, "INSERT INTO metrics (metric_id, metric_type, metric_delta, metric_value, metric_hash) values ( $1 , $2, $3, $4, $5 );", m.ID, m.MType, m.Delta, m.Value, m.Hash)
 	if err != nil {
 		return err
@@ -58,13 +53,13 @@ func (ms *PostreSQLStorage) Set(m models.Metrics) error {
 	return nil
 }
 
-func (ms *PostreSQLStorage) SetBunch(metrics []models.Metrics) error {
+func (ms *PostreSQLStorage) SetMetrics(metrics []models.Metrics) error {
 	tx, err := ms.db.Begin()
 	if err != nil {
 		return err
 	}
 	for _, m := range metrics {
-		err := ms.Set(m)
+		err := ms.SetMetric(m)
 		if err != nil {
 			tx.Rollback()
 			return err
@@ -88,7 +83,7 @@ func (ms *PostreSQLStorage) GetMetric(metricKey string, metricType string) (mode
 
 }
 
-func (ms *PostreSQLStorage) GetString(metricKey string, metricType string) (string, error) {
+func (ms *PostreSQLStorage) GetMetricString(metricKey string, metricType string) (string, error) {
 	return "", nil
 }
 
@@ -113,59 +108,4 @@ func (ms *PostreSQLStorage) GetAllMetric() []models.Metrics {
 	}
 
 	return metrics
-}
-
-func (ms *PostreSQLStorage) LoadMetrics(filename string) error {
-	file, err := os.OpenFile(filename, os.O_RDONLY, 0666)
-	if err != nil {
-		return errors.New("can't open file")
-	}
-
-	buf := bufio.NewReader(file)
-	line, err := buf.ReadBytes('\n')
-	if err != nil {
-		return err
-	}
-
-	if string(line) != "[\n" {
-		return errors.New("wrong file")
-	}
-
-	var metrics []models.Metrics
-
-	for {
-		var metric models.Metrics
-		line, err = buf.ReadBytes('\n')
-		if err != nil {
-			return err
-		}
-		stringLine := strings.TrimRight(strings.TrimSpace(string(line)), ",")
-		if stringLine == "]" {
-			break
-		}
-		json.Unmarshal([]byte(stringLine), &metric)
-		metrics = append(metrics, metric)
-	}
-	return ms.SetBunch(metrics)
-}
-
-func (ms *PostreSQLStorage) SaveMetrics(filename string) error {
-	file, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE, 0666)
-	if err != nil {
-		return err
-	}
-
-	metrics := ms.GetAllMetric()
-
-	file.WriteString("[\n")
-
-	for _, value := range metrics {
-		jsonString, _ := json.Marshal(value)
-		file.WriteString("  ")
-		file.Write(jsonString)
-		file.WriteString(",\n")
-	}
-	file.WriteString("]\n")
-	file.Close()
-	return nil
 }

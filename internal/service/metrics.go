@@ -10,7 +10,6 @@ import (
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 
-	"github.com/2er9ey/go-musthave-metrics/internal/logger"
 	"github.com/2er9ey/go-musthave-metrics/internal/models"
 	"github.com/2er9ey/go-musthave-metrics/internal/repository"
 )
@@ -62,17 +61,14 @@ func (ms *MetricService) Set(mID string, mType string, mValue string) error {
 		err = errors.New("invalid metric type (" + mType + ")")
 	}
 	if err == nil {
-		ms.repo.Set(metric)
-		if ms.saveInterval == 0 {
-			ms.repo.SaveMetrics(ms.storageFilename)
-		}
+		ms.repo.SetMetric(metric)
 		return nil
 	}
 	return err
 }
 
 func (ms *MetricService) Get(mID string, mType string) (string, error) {
-	return ms.repo.GetString(mID, mType)
+	return ms.repo.GetMetricString(mID, mType)
 }
 
 func (ms *MetricService) GetMetric(mID string, mType string) (models.Metrics, error) {
@@ -81,32 +77,6 @@ func (ms *MetricService) GetMetric(mID string, mType string) (models.Metrics, er
 
 func (ms *MetricService) GetAll() []models.Metrics {
 	return ms.repo.GetAllMetric()
-}
-
-func (ms *MetricService) LoadMetrics(filename string) error {
-	return ms.repo.LoadMetrics(filename)
-}
-
-func (ms *MetricService) SaveMetrics(filename string) error {
-	return ms.repo.SaveMetrics(filename)
-}
-
-func (ms *MetricService) RunSaver() {
-	if ms.saveInterval <= 0 {
-		return
-	}
-	go func() {
-		for {
-			select {
-			case <-ms.ctx.Done():
-				return
-			default:
-				time.Sleep(time.Duration(ms.saveInterval) * time.Second)
-			}
-			logger.Log.Debug("Saving metrics")
-			ms.SaveMetrics(ms.storageFilename)
-		}
-	}()
 }
 
 func (ms *MetricService) DBChekConnection() (bool, error) {
@@ -122,5 +92,5 @@ func (ms *MetricService) DBChekConnection() (bool, error) {
 }
 
 func (ms *MetricService) SetBunch(metrics []models.Metrics) error {
-	return ms.repo.SetBunch(metrics)
+	return ms.repo.SetMetrics(metrics)
 }
