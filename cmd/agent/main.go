@@ -29,7 +29,7 @@ func main() {
 	}
 
 	cm := agent.NewCollectionMetrics()
-	var repo repository.MetricsRepositoryInterface = repository.NewMemoryStorage()
+	repo, _ := repository.NewMemoryStorage()
 
 	var wg sync.WaitGroup
 	go getMetrics(repo, cm)

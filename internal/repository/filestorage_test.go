@@ -10,7 +10,7 @@ import (
 )
 
 func TestFileStorageCreateStorage1(t *testing.T) {
-	fs := NewFileStorage("", 0, false)
+	fs, _ := NewFileStorage("", 0, false)
 	assert.Nil(t, fs, "FileStrorage storage must be nil")
 }
 
@@ -24,7 +24,7 @@ func TestFileStorageCreateStorage2(t *testing.T) {
 
 	t.Logf("Temp filename: %s", tmpFile.Name())
 
-	fs := NewFileStorage(tmpFile.Name(), 0, false)
+	fs, _ := NewFileStorage(tmpFile.Name(), 0, false)
 	assert.NotNil(t, fs, "FileStrorage storage must not be nil")
 }
 
@@ -38,7 +38,7 @@ func TestFileStorageSaveMetrics1(t *testing.T) {
 
 	t.Logf("Temp filename: %s", tmpFile.Name())
 
-	fs := NewFileStorage(tmpFile.Name(), 0, false)
+	fs, _ := NewFileStorage(tmpFile.Name(), 0, false)
 	assert.NotNil(t, fs, "FileStrorage storage must not be nil")
 
 	err = fs.SaveMetrics()
@@ -55,7 +55,7 @@ func TestFileStorageRunSaver1(t *testing.T) {
 
 	t.Logf("Temp filename: %s", tmpFile.Name())
 
-	fs := NewFileStorage(tmpFile.Name(), 3, false)
+	fs, _ := NewFileStorage(tmpFile.Name(), 3, false)
 	assert.NotNil(t, fs, "FileStrorage storage must not be nil")
 
 	metric := models.NewMetricCounter("123", 345)

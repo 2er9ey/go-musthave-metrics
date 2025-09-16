@@ -44,7 +44,7 @@ func TestMainHandler(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	repo := repository.NewMemoryStorage()
+	repo, _ := repository.NewMemoryStorage()
 	serv := service.NewMetricService(ctx, repo, 1, "", "")
 	metricsHandler := NewMetricHandler(serv)
 
