@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"os"
 	"strings"
 	"sync"
@@ -20,13 +19,13 @@ type FileStorage struct {
 	storeInterval int
 }
 
-func NewFileStorage(fileName string, storeInterval int, restoreMetric bool) *FileStorage {
+func NewFileStorage(fileName string, storeInterval int, restoreMetric bool) (*FileStorage, error) {
 	if fileName == "" {
-		return nil
+		return nil, errors.New("filename must not be empty")
 	}
-	ms := NewMemoryStorage()
-	if ms == nil {
-		return nil
+	ms, err := NewMemoryStorage()
+	if err == nil {
+		return nil, errors.New("out of memory")
 	}
 
 	fs := &FileStorage{
@@ -36,16 +35,15 @@ func NewFileStorage(fileName string, storeInterval int, restoreMetric bool) *Fil
 	}
 
 	if restoreMetric {
-		fs.LoadMetrics(fileName)
-		// if err != nil {
-		// 	fmt.Println("xxx -> ", err)
-		// 	return nil
-		// }
+		err = fs.LoadMetrics(fileName)
+		if err != nil {
+			return nil, err
+		}
 	}
 	if storeInterval > 0 {
 		fs.RunSaver()
 	}
-	return fs
+	return fs, err
 }
 
 func (fs *FileStorage) SetMetric(m models.Metrics) error {
@@ -72,7 +70,6 @@ func (fs *FileStorage) SetMetrics(metrics []models.Metrics) error {
 
 func (fs *FileStorage) GetMetric(metricKey string, metricType string) (models.Metrics, error) {
 	if fs == nil {
-		fmt.Println("!!!!!!!!!!!!!!!")
 		os.Exit(10)
 	}
 	if fs.ms == nil {

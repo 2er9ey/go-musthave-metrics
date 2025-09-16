@@ -14,11 +14,11 @@ type MemoryStorage struct {
 	metricsCounter map[string]models.Metrics
 }
 
-func NewMemoryStorage() *MemoryStorage {
+func NewMemoryStorage() (*MemoryStorage, error) {
 	return &MemoryStorage{
 		metricsGauge:   make(map[string]models.Metrics),
 		metricsCounter: make(map[string]models.Metrics),
-	}
+	}, nil
 }
 
 func (ms *MemoryStorage) PrintAll() {

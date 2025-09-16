@@ -1,4 +1,4 @@
-package pgerrors
+package dbutils
 
 import (
 	"errors"
