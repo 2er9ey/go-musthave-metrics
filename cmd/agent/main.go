@@ -70,8 +70,7 @@ func sendBunchMetricsCompressedWithRetry(repo repository.MetricsRepositoryInterf
 		if err2 != nil {
 			switch err2 := err2.(type) {
 			case *url.Error:
-				_, ok := err2.Err.(*net.OpError)
-				if !err2.Timeout() && !ok {
+				if !err2.Timeout() && err2.Err.(*net.OpError) != nil {
 					break
 				}
 			default:
