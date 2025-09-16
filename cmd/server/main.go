@@ -49,7 +49,7 @@ func main() {
 		repo = ps
 	}
 	if repoerr != nil {
-		logger.Log.Error("Ошибка создания репозитория метрик")
+		logger.Log.Error("Ошибка создания репозитория метрик: ", zap.String("repoerr", repoerr.Error()))
 		os.Exit(1)
 	}
 	service := service.NewMetricService(ctx, repo, config.storeInterval, config.fileStoragePath, config.databaseDSN)

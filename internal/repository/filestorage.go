@@ -35,10 +35,10 @@ func NewFileStorage(fileName string, storeInterval int, restoreMetric bool) (*Fi
 	}
 
 	if restoreMetric {
-		err = fs.LoadMetrics(fileName)
-		if err != nil {
-			return nil, err
-		}
+		fs.LoadMetrics(fileName)
+		// if err != nil {
+		// 	return nil, err
+		// }
 	}
 	if storeInterval > 0 {
 		fs.RunSaver()
