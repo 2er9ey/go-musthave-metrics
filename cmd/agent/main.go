@@ -34,7 +34,7 @@ func main() {
 	var wg sync.WaitGroup
 	go getMetrics(repo, cm)
 	time.Sleep(config.reportInterval)
-	sendBunchMetricsCompressed(repo)
+	senderMetrics(repo)
 	wg.Wait()
 	// fmt.Println("All workers are done!")
 }
