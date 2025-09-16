@@ -24,7 +24,7 @@ func NewFileStorage(fileName string, storeInterval int, restoreMetric bool) (*Fi
 		return nil, errors.New("filename must not be empty")
 	}
 	ms, err := NewMemoryStorage()
-	if err == nil {
+	if err != nil {
 		return nil, errors.New("out of memory")
 	}
 
