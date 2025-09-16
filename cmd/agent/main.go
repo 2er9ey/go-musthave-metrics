@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"net/url"
 	"sync"
 	"time"
 
@@ -52,11 +51,11 @@ func getMetrics(repo repository.MetricsRepositoryInterface, collectMetrics *[]ag
 func senderMetrics(repo repository.MetricsRepositoryInterface) {
 	for {
 		buf := GetMetricsBunch(repo)
-		sendBunchMetricsCompressedWithRetry(repo, 4, buf)
+		sendBunchMetricsCompressedWithRetry(4, buf)
 	}
 }
 
-func sendBunchMetricsCompressedWithRetry(repo repository.MetricsRepositoryInterface, maxReties int, buf *bytes.Buffer) {
+func sendBunchMetricsCompressedWithRetry(maxReties int, buf *bytes.Buffer) {
 	retryTimeout := 1
 	request, err := http.NewRequest("POST", "http://"+config.serverEndpoint+"/updates", buf)
 	if err != nil {
@@ -64,20 +63,16 @@ func sendBunchMetricsCompressedWithRetry(repo repository.MetricsRepositoryInterf
 	}
 	request.Header.Set("Content-Encoding", "gzip")
 	request.Header.Set("Content-type", "application/json")
-	for retry := 0; retry < 4; retry++ {
+	for retry := range maxReties {
 		fmt.Println("Try ", retry)
 		resp, err2 := http.DefaultClient.Do(request)
-		if err2 != nil {
-			switch err2 := err2.(type) {
-			case *url.Error:
-				if !err2.Timeout() && err2.Err.(*net.OpError) != nil {
-					break
-				}
-			default:
-				break
-			}
-		} else {
+		if err2 == nil {
 			resp.Body.Close()
+			break
+		}
+		switch err2.(type) {
+		case *net.OpError:
+		default:
 			break
 		}
 		if retry < 3 {
