@@ -72,7 +72,17 @@ func (ms *PostgreSQLStorage) SetMetrics(metrics []models.Metrics) error {
 			return err
 		}
 	}
-	return tx.Commit()
+
+	err = tx.Commit()
+	classifier := dbutils.NewPostgresErrorClassifier()
+	classification := classifier.Classify(err)
+	for attempt := 0; err != nil && classification == dbutils.Retriable && attempt < 4; attempt++ {
+		time.Sleep(time.Duration(1+(attempt*2)) * time.Second)
+		err = tx.Commit()
+		classification = classifier.Classify(err)
+	}
+
+	return err
 }
 
 func (ms *PostgreSQLStorage) GetMetric(metricKey string, metricType string) (models.Metrics, error) {
