@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func SetupRouter(metricsHandler handler.MetricHandler) *gin.Engine {
+func SetupRouter(metricsHandler handler.MetricHandler, sigingKey string) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	gin.DefaultWriter = io.Discard
 	router := gin.New()
@@ -16,6 +16,10 @@ func SetupRouter(metricsHandler handler.MetricHandler) *gin.Engine {
 
 	router.Use(gin.Recovery())
 	router.Use(logger.LoggerMiddleware())
+	if sigingKey != "" {
+		signerMiddleware := handler.NewSigner(sigingKey)
+		router.Use(signerMiddleware.SignMiddleware())
+	}
 	router.Use(handler.GzipMiddleware())
 
 	router.GET("/", func(c *gin.Context) {

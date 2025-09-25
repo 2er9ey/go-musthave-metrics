@@ -55,7 +55,7 @@ func main() {
 	service := service.NewMetricService(ctx, repo, config.storeInterval, config.fileStoragePath, config.databaseDSN)
 	metricsHandler := handler.NewMetricHandler(service)
 
-	router := SetupRouter(*metricsHandler)
+	router := SetupRouter(*metricsHandler, config.signingKey)
 	logger.Log.Info("Starting server listen on", zap.String("listenEndpoint", config.listenEndpoint))
 	router.Run(config.listenEndpoint)
 }

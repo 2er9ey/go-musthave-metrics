@@ -3,6 +3,9 @@ package main
 import (
 	"bytes"
 	"compress/gzip"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -33,7 +36,7 @@ func main() {
 	var wg sync.WaitGroup
 	go getMetrics(repo, cm)
 	time.Sleep(config.reportInterval)
-	senderMetrics(repo)
+	senderMetricsCompressed(repo, config.signingKey)
 	wg.Wait()
 	// fmt.Println("All workers are done!")
 }
@@ -48,14 +51,14 @@ func getMetrics(repo repository.MetricsRepositoryInterface, collectMetrics *[]ag
 	}
 }
 
-func senderMetrics(repo repository.MetricsRepositoryInterface) {
+func senderMetricsCompressed(repo repository.MetricsRepositoryInterface, key string) {
 	for {
 		buf := GetMetricsBunch(repo)
-		sendBunchMetricsCompressedWithRetry(4, buf)
+		sendBunchMetricsWithRetry(4, buf, key)
 	}
 }
 
-func sendBunchMetricsCompressedWithRetry(maxReties int, buf *bytes.Buffer) {
+func sendBunchMetricsWithRetry(maxReties int, buf *bytes.Buffer, key string) {
 	retryTimeout := 1
 	request, err := http.NewRequest("POST", "http://"+config.serverEndpoint+"/updates", buf)
 	if err != nil {
@@ -63,6 +66,12 @@ func sendBunchMetricsCompressedWithRetry(maxReties int, buf *bytes.Buffer) {
 	}
 	request.Header.Set("Content-Encoding", "gzip")
 	request.Header.Set("Content-type", "application/json")
+	if key != "" {
+		h := hmac.New(sha256.New, []byte(key))
+		h.Write(buf.Bytes())
+		dst := hex.EncodeToString(h.Sum(nil))
+		request.Header.Set("HashSHA256", dst)
+	}
 	for retry := range maxReties {
 		fmt.Println("Try ", retry)
 		resp, err2 := http.DefaultClient.Do(request)
