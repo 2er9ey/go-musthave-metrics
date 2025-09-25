@@ -9,6 +9,7 @@ import (
 
 type Config struct {
 	serverEndpoint string
+	signingKey     string
 	pollInterval   time.Duration
 	reportInterval time.Duration
 }
@@ -18,17 +19,20 @@ func parseConfig() (Config, error) {
 		ServerEndpoint string `env:"ADDRESS"`
 		PollInterval   string `env:"POLL_INTERVAL"`
 		ReportInterval string `env:"REPORT_INTERVAL"`
+		SigningKey     string `env:KEY`
 	}
 	var cfgFlag struct {
 		ServerEndpoint string
 		PollInterval   string
 		ReportInterval string
+		SigningKey     string
 	}
 	var conf Config
 
 	flag.StringVar(&cfgFlag.ServerEndpoint, "a", "localhost:8080", "Адрес и порт для работы севрера")
 	flag.StringVar(&cfgFlag.PollInterval, "p", "2s", "Время опроса метрик")
 	flag.StringVar(&cfgFlag.ReportInterval, "r", "10s", "Время отправки метрик на сервер")
+	flag.StringVar(&cfgFlag.SigningKey, "k", "", "Ключ для подписи")
 	flag.Parse()
 
 	if err := env.Parse(&cfgEnv); err != nil {
@@ -39,6 +43,12 @@ func parseConfig() (Config, error) {
 		conf.serverEndpoint = cfgEnv.ServerEndpoint
 	} else {
 		conf.serverEndpoint = cfgFlag.ServerEndpoint
+	}
+
+	if cfgEnv.SigningKey != "" {
+		conf.signingKey = cfgEnv.SigningKey
+	} else {
+		conf.signingKey = cfgFlag.SigningKey
 	}
 
 	var tmpPollInterval string
