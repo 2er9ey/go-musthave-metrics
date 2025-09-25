@@ -19,7 +19,7 @@ func parseConfig() (Config, error) {
 		ServerEndpoint string `env:"ADDRESS"`
 		PollInterval   string `env:"POLL_INTERVAL"`
 		ReportInterval string `env:"REPORT_INTERVAL"`
-		SigningKey     string `env:KEY`
+		SigningKey     string `env:"KEY"`
 	}
 	var cfgFlag struct {
 		ServerEndpoint string
