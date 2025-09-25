@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"sync"
 	"time"
@@ -27,12 +28,12 @@ func main() {
 	}
 
 	cm := agent.NewCollectionMetrics()
-	var repo repository.MetricsRepositoryInterface = repository.NewMemoryStorage()
+	repo, _ := repository.NewMemoryStorage()
 
 	var wg sync.WaitGroup
 	go getMetrics(repo, cm)
 	time.Sleep(config.reportInterval)
-	sendMetricsCompressed(repo)
+	senderMetrics(repo)
 	wg.Wait()
 	// fmt.Println("All workers are done!")
 }
@@ -47,49 +48,51 @@ func getMetrics(repo repository.MetricsRepositoryInterface, collectMetrics *[]ag
 	}
 }
 
-func sendMetrics(repo repository.MetricsRepositoryInterface) {
+func senderMetrics(repo repository.MetricsRepositoryInterface) {
 	for {
-		mutex.Lock()
-		metrics := repo.GetAllMetric()
-		mutex.Unlock()
-		for _, value := range metrics {
-			jsonValue, _ := json.Marshal(value)
-			response, err := http.Post("http://"+config.serverEndpoint+"/update", "application/json", bytes.NewBuffer(jsonValue))
-			if err != nil {
-				//				fmt.Println("Ошибка отправки метрик")
-				break
-			}
-			response.Body.Close()
-		}
-		//		fmt.Println("Метрики отправлены")
-		time.Sleep(config.reportInterval)
+		buf := GetMetricsBunch(repo)
+		sendBunchMetricsCompressedWithRetry(4, buf)
 	}
 }
 
-func sendMetricsCompressed(repo repository.MetricsRepositoryInterface) {
-	for {
-		mutex.Lock()
-		metrics := repo.GetAllMetric()
-		mutex.Unlock()
-		for _, value := range metrics {
-			jsonValue, _ := json.Marshal(value)
-			buf := bytes.NewBuffer(nil)
-			zb := gzip.NewWriter(buf)
-			zb.Write(jsonValue)
-			zb.Close()
-			request, err := http.NewRequest("POST", "http://"+config.serverEndpoint+"/update", buf)
-			if err != nil {
-				break
-			}
-			request.Header.Set("Content-Encoding", "gzip")
-			request.Header.Set("Content-type", "application/json")
-			resp, err2 := http.DefaultClient.Do(request)
-			if err2 != nil {
-				break
-			}
-			resp.Body.Close()
-		}
-		//		fmt.Println("Метрики отправлены")
-		time.Sleep(config.reportInterval)
+func sendBunchMetricsCompressedWithRetry(maxReties int, buf *bytes.Buffer) {
+	retryTimeout := 1
+	request, err := http.NewRequest("POST", "http://"+config.serverEndpoint+"/updates", buf)
+	if err != nil {
+		return
 	}
+	request.Header.Set("Content-Encoding", "gzip")
+	request.Header.Set("Content-type", "application/json")
+	for retry := range maxReties {
+		fmt.Println("Try ", retry)
+		resp, err2 := http.DefaultClient.Do(request)
+		if err2 == nil {
+			resp.Body.Close()
+			break
+		}
+		switch err2.(type) {
+		case *net.OpError:
+		default:
+			break
+		}
+		if retry < 3 {
+			fmt.Printf("Sleeping %d seconds\n", retryTimeout)
+			time.Sleep(time.Duration(retryTimeout) * time.Second)
+			fmt.Println("Wakeup")
+			retryTimeout = retryTimeout + 2
+		}
+	}
+	time.Sleep(config.reportInterval)
+}
+
+func GetMetricsBunch(repo repository.MetricsRepositoryInterface) *bytes.Buffer {
+	mutex.Lock()
+	metrics := repo.GetAllMetric()
+	mutex.Unlock()
+	jsonValue, _ := json.Marshal(metrics)
+	buf := bytes.NewBuffer(nil)
+	zb := gzip.NewWriter(buf)
+	zb.Write(jsonValue)
+	zb.Close()
+	return buf
 }

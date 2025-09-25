@@ -22,12 +22,21 @@ func SetupRouter(metricsHandler handler.MetricHandler) *gin.Engine {
 		metricsHandler.GetAll(c)
 	})
 
+	router.GET("/ping", func(c *gin.Context) {
+		metricsHandler.Ping(c)
+	})
+
 	valueGroup := router.Group("/value")
 	valueGroup.GET("/:metricType/:metricName", func(c *gin.Context) {
 		metricsHandler.GetValue(c)
 	})
 	valueGroup.POST("/", func(c *gin.Context) {
 		metricsHandler.GetValueJSON(c)
+	})
+
+	router.POST("/updates", func(c *gin.Context) {
+		logger.Log.Debug("POST request for /updates")
+		metricsHandler.PostUpdateJSON(c)
 	})
 
 	updateGroup := router.Group("/update")
@@ -37,6 +46,7 @@ func SetupRouter(metricsHandler handler.MetricHandler) *gin.Engine {
 	})
 
 	updateGroup.POST("/", func(c *gin.Context) {
+		logger.Log.Debug("POST request for /update")
 		metricsHandler.PostUpdateJSON(c)
 	})
 

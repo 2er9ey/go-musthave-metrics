@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"sort"
 
@@ -20,10 +21,32 @@ func NewMetricHandler(service service.MetricServiceInterface) *MetricHandler {
 	return &MetricHandler{service: service}
 }
 
-type MetricRequest struct {
-	ID    string `json:"id"`
-	MType string `json:"type"`
-	Value string `json:"value,omitempty"`
+// type MetricRequest struct {
+// 	ID    string `json:"id"`
+// 	MType string `json:"type"`
+// 	Value string `json:"value,omitempty"`
+// }
+
+type MetricRequestBunch []models.Metrics
+
+// UnmarshalJSON implements the json.Unmarshaler interface for Items.
+func (i *MetricRequestBunch) UnmarshalJSON(data []byte) error {
+	logger.Log.Debug("JSONRequest = ", zap.String("data", string(data)))
+	// Try to unmarshal as an array first.
+	var arr []models.Metrics
+	if err := json.Unmarshal(data, &arr); err == nil {
+		*i = arr
+		return nil
+	}
+
+	// If it's not an array, try to unmarshal as a single object.
+	var single models.Metrics
+	if err := json.Unmarshal(data, &single); err == nil {
+		*i = []models.Metrics{single} // Convert single item to a slice.
+		return nil
+	}
+
+	return fmt.Errorf("cannot unmarshal JSON into Items: %s", string(data))
 }
 
 func (mh *MetricHandler) PostUpdate(c *gin.Context) {
@@ -58,28 +81,39 @@ func (mh *MetricHandler) PostUpdateJSON(c *gin.Context) {
 		return
 	}
 
-	var req models.Metrics
 	dec := json.NewDecoder(c.Request.Body)
+
+	var req MetricRequestBunch
 	if err := dec.Decode(&req); err != nil {
 		logger.Log.Debug("cannot decode request JSON body", zap.Error(err))
 		c.Writer.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	if req.MType == "" || req.ID == "" {
-		logger.Log.Debug("metric is incorrect", zap.String("req.String()", req.String()),
-			zap.String("req.MType", req.MType), zap.String("req.ID", req.ID))
-		c.String(http.StatusNotFound, "Неверный запрос {%s}, {%s}, {%s}", req.MType, req.ID, req.String())
-		return
-	}
-
-	err := mh.service.Set(req.ID, req.MType, req.String())
+	err := mh.service.SetBunch(req)
 	if err != nil {
-		logger.Log.Debug("cannot set metric", zap.Error(err), zap.String("req.String()", req.String()),
-			zap.String("req.MType", req.MType), zap.String("req.ID", req.ID))
+		logger.Log.Debug("cannot set of metric", zap.Error(err))
 		c.String(http.StatusBadRequest, "Неверное значение метрики")
 		return
 	}
+
+	// var metrics models.Metrics
+	// for _, item := range req {
+	// 	err := mh.service.Set(item.ID, item.MType, item.Value)
+	// 	if err != nil {
+	// 		logger.Log.Debug("cannot set of metric", zap.Error(err))
+	// 		c.String(http.StatusBadRequest, "Неверное значение метрики")
+	// 		return
+	// 	}
+	// 	// 	// metrics = append(metrics, metric)
+	// }
+
+	// err := mh.service.SetBunch(metrics)
+	// if err != nil {
+	// 	logger.Log.Debug("cannot set bunch of metric", zap.Error(err))
+	// 	c.String(http.StatusBadRequest, "Неверное значение метрики")
+	// 	return
+	// }
 	c.Header("Content-type", "application/json")
 	c.String(http.StatusOK, "{}")
 }
@@ -159,4 +193,14 @@ func (mh *MetricHandler) GetAll(c *gin.Context) {
 	body += "</table></body></html>"
 	c.Writer.Header().Set("Content-type", "text/html; charset=utf-8")
 	c.String(http.StatusOK, body)
+}
+
+func (mh *MetricHandler) Ping(c *gin.Context) {
+	res, err := mh.service.Ping()
+	// fmt.Println("Check result = ", res, err)
+	if !res {
+		c.String(http.StatusInternalServerError, err.Error())
+		return
+	}
+	c.String(http.StatusOK, "OK")
 }

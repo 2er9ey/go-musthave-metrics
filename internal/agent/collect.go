@@ -27,7 +27,7 @@ func CollectorMetrics(repo repository.MetricsRepositoryInterface, collectMetrics
 			err = errors.New("invalid collect type")
 		}
 		if err == nil {
-			repo.Set(metric)
+			repo.SetMetric(metric)
 		} else {
 			return err
 		}
