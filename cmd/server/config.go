@@ -24,7 +24,7 @@ func parseConfig() (Config, error) {
 		FileStoragePath string `env:"FILE_STORAGE_PATH"`
 		RestoreMetrics  string `env:"RESTORE"`
 		DatabaseDSN     string `env:"DATABASE_DSN"`
-		SigningKey      string `env:KEY`
+		SigningKey      string `env:"KEY"`
 	}
 	var conf Config
 
