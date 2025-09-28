@@ -14,6 +14,7 @@ type Config struct {
 	fileStoragePath string
 	restoreMetrics  bool
 	databaseDSN     string
+	signingKey      string
 }
 
 func parseConfig() (Config, error) {
@@ -23,6 +24,7 @@ func parseConfig() (Config, error) {
 		FileStoragePath string `env:"FILE_STORAGE_PATH"`
 		RestoreMetrics  string `env:"RESTORE"`
 		DatabaseDSN     string `env:"DATABASE_DSN"`
+		SigningKey      string `env:"KEY"`
 	}
 	var conf Config
 
@@ -32,6 +34,7 @@ func parseConfig() (Config, error) {
 	flag.StringVar(&conf.fileStoragePath, "f", "metrics.dat", "Имя файла для сохранения значения метрик")
 	//	flag.StringVar(&conf.databaseDSN, "d", "host=127.0.0.1 user=video password=XXXXXXXX dbname=video sslmode=disable", "Строка подключения к базе данных")
 	flag.StringVar(&conf.databaseDSN, "d", "", "Строка подключения к базе данных")
+	flag.StringVar(&conf.signingKey, "k", "", "Ключ для формирования подписи сообщений")
 	flag.BoolVar(&conf.restoreMetrics, "r", false, "Считать значения метрик при старте сервера")
 	flag.Parse()
 
@@ -51,6 +54,9 @@ func parseConfig() (Config, error) {
 		conf.databaseDSN = cfgEnv.DatabaseDSN
 	}
 
+	if cfgEnv.SigningKey != "" {
+		conf.signingKey = cfgEnv.SigningKey
+	}
 	if cfgEnv.StoreInterval != "" {
 		conf.storeInterval, _ = strconv.Atoi(cfgEnv.StoreInterval)
 	}

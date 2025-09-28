@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+	"sync"
 
 	"github.com/2er9ey/go-musthave-metrics/internal/models"
 )
 
 type MemoryStorage struct {
+	gaugeMutex     sync.RWMutex
+	counterMutex   sync.RWMutex
 	metricsGauge   map[string]models.Metrics
 	metricsCounter map[string]models.Metrics
 }
@@ -35,14 +38,18 @@ func (ms *MemoryStorage) PrintAll() {
 func (ms *MemoryStorage) SetMetric(m models.Metrics) error {
 	switch m.MType {
 	case models.Gauge:
+		ms.gaugeMutex.Lock()
 		ms.metricsGauge[m.ID] = m
+		ms.gaugeMutex.Unlock()
 	case models.Counter:
+		ms.counterMutex.Lock()
 		_, exists := ms.metricsCounter[m.ID]
 		if exists {
 			*(ms.metricsCounter[m.ID].Delta) += *(m.Delta)
 		} else {
 			ms.metricsCounter[m.ID] = m
 		}
+		ms.counterMutex.Unlock()
 	default:
 		return errors.New("invalid metric type")
 	}
@@ -64,9 +71,13 @@ func (ms *MemoryStorage) GetMetric(metricKey string, metricType string) (models.
 	var exists bool
 	switch metricType {
 	case models.Gauge:
+		ms.gaugeMutex.RLock()
 		metric, exists = ms.metricsGauge[metricKey]
+		ms.gaugeMutex.RUnlock()
 	case models.Counter:
+		ms.counterMutex.RLock()
 		metric, exists = ms.metricsCounter[metricKey]
+		ms.counterMutex.RUnlock()
 	default:
 		return metric, errors.New("invalid metric type")
 	}
@@ -87,8 +98,12 @@ func (ms *MemoryStorage) GetMetricString(metricKey string, metricType string) (s
 }
 
 func (ms *MemoryStorage) GetAllMetric() []models.Metrics {
+	ms.gaugeMutex.RLock()
 	gauges := slices.Collect(maps.Values(ms.metricsGauge))
+	ms.gaugeMutex.RUnlock()
+	ms.counterMutex.RLock()
 	counters := slices.Collect(maps.Values(ms.metricsCounter))
+	ms.counterMutex.RUnlock()
 	return append(gauges, counters...)
 }
 

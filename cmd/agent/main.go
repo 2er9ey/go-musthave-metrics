@@ -3,6 +3,9 @@ package main
 import (
 	"bytes"
 	"compress/gzip"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -11,6 +14,7 @@ import (
 	"time"
 
 	"github.com/2er9ey/go-musthave-metrics/internal/agent"
+	"github.com/2er9ey/go-musthave-metrics/internal/models"
 	"github.com/2er9ey/go-musthave-metrics/internal/repository"
 )
 
@@ -28,34 +32,86 @@ func main() {
 	}
 
 	cm := agent.NewCollectionMetrics()
+	cm2 := agent.NewPSCollectionMetrics()
 	repo, _ := repository.NewMemoryStorage()
 
 	var wg sync.WaitGroup
 	go getMetrics(repo, cm)
+	go getMetrics(repo, cm2)
 	time.Sleep(config.reportInterval)
-	senderMetrics(repo)
+	if config.rateLimit > 0 {
+		senderMetricsCompressedSeparately(repo, config.signingKey, config.rateLimit)
+	} else {
+		senderMetricsCompressed(repo, config.signingKey)
+	}
 	wg.Wait()
 	// fmt.Println("All workers are done!")
 }
 
 func getMetrics(repo repository.MetricsRepositoryInterface, collectMetrics *[]agent.CollectMetric) {
 	for {
-		mutex.Lock()
+		//		mutex.Lock()
 		agent.CollectorMetrics(repo, collectMetrics)
-		mutex.Unlock()
+		//		mutex.Unlock()
 		//		fmt.Println("Метрики собраны")
 		time.Sleep(config.pollInterval)
 	}
 }
 
-func senderMetrics(repo repository.MetricsRepositoryInterface) {
+func senderMetricsCompressed(repo repository.MetricsRepositoryInterface, key string) {
 	for {
-		buf := GetMetricsBunch(repo)
-		sendBunchMetricsCompressedWithRetry(4, buf)
+		metrics := repo.GetAllMetric()
+		buf := bytes.NewBuffer(nil)
+		PrepareBuf(buf, metrics)
+		sendBunchMetricsWithRetry(4, buf, key)
+		time.Sleep(config.reportInterval)
 	}
 }
 
-func sendBunchMetricsCompressedWithRetry(maxReties int, buf *bytes.Buffer) {
+func senderMetricsCompressedSeparately(repo repository.MetricsRepositoryInterface, key string, rateLimit int) {
+	var bufferPool = sync.Pool{
+		// Функция New сработает, если в пуле нет объекта
+		New: func() interface{} {
+			return new(bytes.Buffer)
+		},
+	}
+	var metricPool = sync.Pool{
+		// Функция New сработает, если в пуле нет объекта
+		New: func() interface{} {
+			return new([]models.Metrics)
+		},
+	}
+
+	ch1 := make(chan models.Metrics)
+	defer close(ch1)
+
+	for i := range rateLimit {
+		fmt.Println("Running sending worker N", i)
+		go func() {
+			for {
+				metric := <-ch1
+				sendMetricsPtr := metricPool.Get().(*[]models.Metrics)
+				sendMetrics := append(*sendMetricsPtr, metric)
+				buf := bufferPool.Get().(*bytes.Buffer)
+				buf.Reset()
+				PrepareBuf(buf, sendMetrics)
+				sendBunchMetricsWithRetry(4, buf, key)
+				bufferPool.Put(buf)
+				bufferPool.Put(sendMetricsPtr)
+			}
+		}()
+	}
+
+	for {
+		metrics := repo.GetAllMetric()
+		for _, v := range metrics {
+			ch1 <- v
+		}
+		time.Sleep(config.reportInterval)
+	}
+}
+
+func sendBunchMetricsWithRetry(maxReties int, buf *bytes.Buffer, key string) {
 	retryTimeout := 1
 	request, err := http.NewRequest("POST", "http://"+config.serverEndpoint+"/updates", buf)
 	if err != nil {
@@ -63,6 +119,12 @@ func sendBunchMetricsCompressedWithRetry(maxReties int, buf *bytes.Buffer) {
 	}
 	request.Header.Set("Content-Encoding", "gzip")
 	request.Header.Set("Content-type", "application/json")
+	if key != "" {
+		h := hmac.New(sha256.New, []byte(key))
+		h.Write(buf.Bytes())
+		dst := hex.EncodeToString(h.Sum(nil))
+		request.Header.Set("HashSHA256", dst)
+	}
 	for retry := range maxReties {
 		fmt.Println("Try ", retry)
 		resp, err2 := http.DefaultClient.Do(request)
@@ -82,15 +144,10 @@ func sendBunchMetricsCompressedWithRetry(maxReties int, buf *bytes.Buffer) {
 			retryTimeout = retryTimeout + 2
 		}
 	}
-	time.Sleep(config.reportInterval)
 }
 
-func GetMetricsBunch(repo repository.MetricsRepositoryInterface) *bytes.Buffer {
-	mutex.Lock()
-	metrics := repo.GetAllMetric()
-	mutex.Unlock()
+func PrepareBuf(buf *bytes.Buffer, metrics []models.Metrics) *bytes.Buffer {
 	jsonValue, _ := json.Marshal(metrics)
-	buf := bytes.NewBuffer(nil)
 	zb := gzip.NewWriter(buf)
 	zb.Write(jsonValue)
 	zb.Close()
