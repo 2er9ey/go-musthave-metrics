@@ -93,6 +93,9 @@ func (fs *FileStorage) GetAllMetric() []models.Metrics {
 }
 
 func (fs *FileStorage) LoadMetrics(filename string) error {
+	fs.mutex.Lock()
+	defer fs.mutex.Unlock()
+
 	file, err := os.OpenFile(filename, os.O_RDONLY, 0666)
 	if err != nil {
 		return errors.New("can't open file " + filename)

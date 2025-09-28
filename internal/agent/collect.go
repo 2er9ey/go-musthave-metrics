@@ -5,34 +5,73 @@ import (
 	"math/rand"
 	"reflect"
 	"runtime"
+	"strconv"
+	"time"
 
 	"github.com/2er9ey/go-musthave-metrics/internal/models"
 	"github.com/2er9ey/go-musthave-metrics/internal/repository"
+	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v4/mem"
 )
 
 func CollectorMetrics(repo repository.MetricsRepositoryInterface, collectMetrics *[]CollectMetric) error {
 	var ms runtime.MemStats
 	runtime.ReadMemStats(&ms)
 	for _, v := range *collectMetrics {
+		var metrics []models.Metrics
 		var metric models.Metrics
 		err := error(nil)
 		switch v.collectType {
 		case collectTypeMemStat:
 			metric, err = collectGetMemStatMectric(ms, v.ID, v.MType)
+			metrics = []models.Metrics{metric}
 		case collectTypeRandom:
 			metric, err = collectGetRandomMectric(v.ID, v.MType)
+			metrics = []models.Metrics{metric}
 		case collectTypeConst1:
 			metric, err = collectGetConst1Mectric(v.ID, v.MType)
+			metrics = []models.Metrics{metric}
+		case collectTypePsUtils:
+			metrics, err = collectGetPSUtilsMetrics(v.ID)
 		default:
 			err = errors.New("invalid collect type")
 		}
 		if err == nil {
-			repo.SetMetric(metric)
+			repo.SetMetrics(metrics)
 		} else {
 			return err
 		}
 	}
 	return nil
+}
+
+func collectGetPSUtilsMetrics(ID string) ([]models.Metrics, error) {
+	var metrics []models.Metrics
+	err := error(nil)
+	v, err := mem.VirtualMemory()
+	if err != nil {
+		err = errors.New("error getting virtual memory info")
+	}
+	switch ID {
+	case "TotalMemory":
+		metric := models.NewMetricGauge(ID, float64(v.Total))
+		metrics = []models.Metrics{metric}
+	case "FreeMemory":
+		metric := models.NewMetricGauge(ID, float64(v.Free))
+		metrics = []models.Metrics{metric}
+	case "CPUutilization":
+		cpudata, err := cpu.Percent(time.Second, true)
+		if err == nil {
+			for k, v := range cpudata {
+				metric := models.NewMetricGauge(ID+strconv.Itoa(k+1), float64(v))
+				metrics = append(metrics, metric)
+			}
+		}
+	default:
+		err = errors.New("invalid metric type")
+	}
+
+	return metrics, err
 }
 
 func collectGetMemStatMectric(ms runtime.MemStats, ID string, MType string) (models.Metrics, error) {

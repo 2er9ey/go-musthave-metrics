@@ -3,6 +3,7 @@ package agent
 import "github.com/2er9ey/go-musthave-metrics/internal/models"
 
 const (
+	collectTypePsUtils = "PSUtils"
 	collectTypeMemStat = "MemStat"
 	collectTypeRandom  = "Random"
 	collectTypeConst1  = "CollectConst1"
@@ -45,5 +46,13 @@ func NewCollectionMetrics() *[]CollectMetric {
 		{ID: "TotalAlloc", collectType: collectTypeMemStat, MType: models.Gauge},
 		{ID: "RandomValue", collectType: collectTypeRandom, MType: models.Gauge},
 		{ID: "PollCount", collectType: collectTypeConst1, MType: models.Counter},
+	})
+}
+
+func NewPSCollectionMetrics() *[]CollectMetric {
+	return &([]CollectMetric{
+		{ID: "TotalMemory", collectType: collectTypePsUtils, MType: models.Gauge},
+		{ID: "FreeMemory", collectType: collectTypePsUtils, MType: models.Gauge},
+		{ID: "CPUutilization", collectType: collectTypePsUtils, MType: models.Gauge},
 	})
 }
